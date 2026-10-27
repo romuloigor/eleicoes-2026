@@ -4,13 +4,25 @@ Leitor e Analisador de Log de Urna Eletrônica (.jez / logd.dat) - TSE
 Compatível com logs oficiais do Tribunal Superior Eleitoral.
 """
 
-import sys
+from __future__ import annotations
+
+import csv
 import os
-import zipfile
 import re
-from datetime import datetime
+import sys
+import zipfile
 from collections import Counter
-from typing import List, Dict, Optional, Generator
+from datetime import datetime
+from typing import Any, Dict, Generator, List, Optional
+
+def sanitize_csv_cell(val: Any) -> Any:
+    """
+    Previne Formula / DDE Injection (CWE-1236) em células exportadas para CSV.
+    """
+    if isinstance(val, str) and val:
+        if val[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return f"'{val}"
+    return val
 
 class LogUrnaParser:
     """
@@ -43,47 +55,48 @@ class LogUrnaParser:
             return match.groupdict()
         return {}
 
-    def iterar_linhas(self) -> Generator[Dict[str, str], None, None]:
+    def iterar_linhas(self) -> Generator[Dict[str, Any], None, None]:
         """
         Gera as linhas do arquivo logd.dat decodificadas como ISO-8859-1.
         Não requer extração prévia para o disco.
         """
-        with zipfile.ZipFile(self.caminho_arquivo, "r") as z:
-            # Arquivo interno padrão é logd.dat
-            nome_interno = "logd.dat"
-            if nome_interno not in z.namelist():
-                # Caso o arquivo interno tenha outro nome
-                candidatos = [f for f in z.namelist() if f.endswith(".dat") or "log" in f]
-                if not candidatos:
-                    raise ValueError(f"Arquivo {nome_interno} não encontrado dentro de {self.caminho_arquivo}")
-                nome_interno = candidatos[0]
+        try:
+            with zipfile.ZipFile(self.caminho_arquivo, "r") as z:
+                nome_interno = "logd.dat"
+                if nome_interno not in z.namelist():
+                    candidatos = [f for f in z.namelist() if f.endswith(".dat") or "log" in f]
+                    if not candidatos:
+                        raise ValueError(f"Arquivo {nome_interno} não encontrado dentro de {self.caminho_arquivo}")
+                    nome_interno = candidatos[0]
 
-            with z.open(nome_interno) as f:
-                for num_linha, linha in enumerate(f, start=1):
-                    texto = linha.decode("iso-8859-1").rstrip("\r\n")
-                    partes = texto.split("\t")
-                    if len(partes) >= 6:
-                        yield {
-                            "linha": num_linha,
-                            "data_hora": partes[0],
-                            "nivel": partes[1],
-                            "id_processo": partes[2],
-                            "modulo": partes[3],
-                            "mensagem": partes[4],
-                            "hash_linha": partes[5],
-                        }
-                    elif len(partes) == 5:
-                        yield {
-                            "linha": num_linha,
-                            "data_hora": partes[0],
-                            "nivel": partes[1],
-                            "id_processo": partes[2],
-                            "modulo": partes[3],
-                            "mensagem": partes[4],
-                            "hash_linha": "",
-                        }
+                with z.open(nome_interno) as f:
+                    for num_linha, linha in enumerate(f, start=1):
+                        texto = linha.decode("iso-8859-1").rstrip("\r\n")
+                        partes = texto.split("\t")
+                        if len(partes) >= 6:
+                            yield {
+                                "linha": num_linha,
+                                "data_hora": partes[0],
+                                "nivel": partes[1],
+                                "id_processo": partes[2],
+                                "modulo": partes[3],
+                                "mensagem": partes[4],
+                                "hash_linha": partes[5],
+                            }
+                        elif len(partes) == 5:
+                            yield {
+                                "linha": num_linha,
+                                "data_hora": partes[0],
+                                "nivel": partes[1],
+                                "id_processo": partes[2],
+                                "modulo": partes[3],
+                                "mensagem": partes[4],
+                                "hash_linha": "",
+                            }
+        except zipfile.BadZipFile as e:
+            raise ValueError(f"Arquivo de log corrompido ou formato inválido: {e}") from e
 
-    def gerar_resumo(self) -> Dict:
+    def gerar_resumo(self) -> Dict[str, Any]:
         """
         Processa os eventos e gera métricas consolidadas da seção eleitoral.
         """
@@ -119,7 +132,8 @@ class LogUrnaParser:
 
             # Votos computados
             if "voto do eleitor foi computado" in msg.lower():
-                data_dia = dt.split()[0]
+                partes_dt = dt.split()
+                data_dia = partes_dt[0] if partes_dt else "N/D"
                 votos_por_data[data_dia] += 1
 
             # Eventos críticos
@@ -148,15 +162,11 @@ class LogUrnaParser:
             "marcos_importantes": marcos_importantes,
         }
 
-    def extrair_horarios_votos(self) -> Dict[str, List[Dict]]:
+    def extrair_horarios_votos(self) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Extrai o histórico detalhado de cada voto computado, incluindo:
-        - Horário de habilitação
-        - Horário da confirmação do voto
-        - Tempo gasto na cabine de votação (em segundos)
-        - Tipo de habilitação (biométrica, manual, etc.)
+        Extrai o histórico detalhado de cada voto computado com segurança de parsing.
         """
-        votos_por_dia = {}
+        votos_por_dia: Dict[str, List[Dict[str, Any]]] = {}
         hab_atual = None
         tipo_hab = "N/I"
 
@@ -171,16 +181,22 @@ class LogUrnaParser:
             elif "Eleitor foi habilitado" in msg:
                 hab_atual = dt_str
             elif "O voto do eleitor foi computado" in msg:
-                dia, hora = dt_str.split()
+                partes_dt = dt_str.split()
+                dia = partes_dt[0] if len(partes_dt) > 0 else "N/D"
+                hora = partes_dt[1] if len(partes_dt) > 1 else "N/D"
+
                 if dia not in votos_por_dia:
                     votos_por_dia[dia] = []
 
-                duracao = None
+                duracao = 0
+                hora_hab = "N/D"
                 if hab_atual:
+                    partes_hab = hab_atual.split()
+                    hora_hab = partes_hab[1] if len(partes_hab) > 1 else "N/D"
                     try:
                         t_ini = datetime.strptime(hab_atual, "%d/%m/%Y %H:%M:%S")
                         t_fim = datetime.strptime(dt_str, "%d/%m/%Y %H:%M:%S")
-                        duracao = int((t_fim - t_ini).total_seconds())
+                        duracao = max(0, int((t_fim - t_ini).total_seconds()))
                     except Exception:
                         duracao = 0
 
@@ -188,8 +204,8 @@ class LogUrnaParser:
                     "sequencial": len(votos_por_dia[dia]) + 1,
                     "data": dia,
                     "hora_computado": hora,
-                    "hora_habilitado": hab_atual.split()[1] if hab_atual else "N/D",
-                    "duracao_segundos": duracao if duracao is not None else 0,
+                    "hora_habilitado": hora_hab,
+                    "duracao_segundos": duracao,
                     "tipo_habilitacao": tipo_hab
                 })
                 hab_atual = None
@@ -197,7 +213,7 @@ class LogUrnaParser:
 
         return votos_por_dia
 
-def imprimir_relatorio(resumo: Dict, detalhar_votos: bool = True):
+def imprimir_relatorio(resumo: Dict[str, Any], detalhar_votos: bool = True) -> None:
     print("=" * 80)
     print(f"RELATÓRIO DE AUDITORIA DO LOG DE URNA - TSE")
     print("=" * 80)
@@ -245,31 +261,41 @@ if __name__ == "__main__":
                 caminho_arq = fallback
                 break
 
-    parser = LogUrnaParser(caminho_arq)
-    resumo = parser.gerar_resumo()
-    imprimir_relatorio(resumo)
+    try:
+        parser = LogUrnaParser(caminho_arq)
+        resumo = parser.gerar_resumo()
+        imprimir_relatorio(resumo)
 
-    if args.votos or args.csv:
-        historico_votos = parser.extrair_horarios_votos()
-        for dia, lista_votos in historico_votos.items():
-            print(f"\nCRONOLOGIA DE VOTOS - DIA {dia} ({len(lista_votos)} votos computados):")
-            print(f"{'Seq':<5} | {'Habilitado':<10} | {'Computado':<10} | {'Duração':<9} | {'Tipo Habilitação':<18}")
-            print("-" * 65)
-            for v in lista_votos:
-                print(f"{v['sequencial']:<5} | {v['hora_habilitado']:<10} | {v['hora_computado']:<10} | {v['duracao_segundos']:>4}s    | {v['tipo_habilitacao']}")
+        if args.votos or args.csv:
+            historico_votos = parser.extrair_horarios_votos()
+            for dia, lista_votos in historico_votos.items():
+                print(f"\nCRONOLOGIA DE VOTOS - DIA {dia} ({len(lista_votos)} votos computados):")
+                print(f"{'Seq':<5} | {'Habilitado':<10} | {'Computado':<10} | {'Duração':<9} | {'Tipo Habilitação':<18}")
+                print("-" * 65)
+                for v in lista_votos:
+                    print(f"{v['sequencial']:<5} | {v['hora_habilitado']:<10} | {v['hora_computado']:<10} | {v['duracao_segundos']:>4}s    | {v['tipo_habilitacao']}")
 
-        if args.csv:
-            import csv
-            nome_csv = "horarios_votos.csv"
-            if os.path.exists(os.path.join("data", "processed")):
-                nome_csv = os.path.join("data", "processed", "horarios_votos.csv")
-            elif os.path.exists(os.path.join("..", "data", "processed")):
-                nome_csv = os.path.join("..", "data", "processed", "horarios_votos.csv")
+            if args.csv:
+                nome_csv = "horarios_votos.csv"
+                if os.path.exists(os.path.join("data", "processed")):
+                    nome_csv = os.path.join("data", "processed", "horarios_votos.csv")
+                elif os.path.exists(os.path.join("..", "data", "processed")):
+                    nome_csv = os.path.join("..", "data", "processed", "horarios_votos.csv")
 
-            with open(nome_csv, "w", newline="", encoding="utf-8") as f_csv:
-                writer = csv.writer(f_csv)
-                writer.writerow(["Data", "Sequencial", "Hora_Habilitacao", "Hora_Voto_Computado", "Duracao_Segundos", "Tipo_Habilitacao"])
-                for dia, lista_votos in historico_votos.items():
-                    for v in lista_votos:
-                        writer.writerow([v["data"], v["sequencial"], v["hora_habilitado"], v["hora_computado"], v["duracao_segundos"], v["tipo_habilitacao"]])
-            print(f"\n[SUCESSO] Horários exportados para {nome_csv}")
+                with open(nome_csv, "w", newline="", encoding="utf-8") as f_csv:
+                    writer = csv.writer(f_csv)
+                    writer.writerow(["Data", "Sequencial", "Hora_Habilitacao", "Hora_Voto_Computado", "Duracao_Segundos", "Tipo_Habilitacao"])
+                    for dia, lista_votos in historico_votos.items():
+                        for v in lista_votos:
+                            writer.writerow([
+                                sanitize_csv_cell(v["data"]),
+                                v["sequencial"],
+                                sanitize_csv_cell(v["hora_habilitado"]),
+                                sanitize_csv_cell(v["hora_computado"]),
+                                v["duracao_segundos"],
+                                sanitize_csv_cell(v["tipo_habilitacao"])
+                            ])
+                print(f"\n[SUCESSO] Horários exportados para {nome_csv}")
+    except Exception as e:
+        print(f"[ERRO] {e}", file=sys.stderr)
+        sys.exit(1)

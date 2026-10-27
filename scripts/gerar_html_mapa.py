@@ -958,10 +958,10 @@ html_template = f'''<!DOCTYPE html>
           </span>
         </div>
         <div class="tse-badges-group">
-          <a href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6257/escrutinio/totalizacao/cargo/1/vis/nominal/ordem/v/consolidado/br" target="_blank" class="btn-tse-badge">
+          <a href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6257/escrutinio/totalizacao/cargo/1/vis/nominal/ordem/v/consolidado/br" target="_blank" rel="noopener noreferrer" class="btn-tse-badge">
             Totalização Brasil 1ºT no TSE ↗
           </a>
-          <a href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/escrutinio/totalizacao/cargo/1/vis/nominal/ordem/v/consolidado/br" target="_blank" class="btn-tse-badge alt">
+          <a href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/escrutinio/totalizacao/cargo/1/vis/nominal/ordem/v/consolidado/br" target="_blank" rel="noopener noreferrer" class="btn-tse-badge alt">
             Totalização Brasil 2ºT no TSE ↗
           </a>
         </div>
@@ -1082,6 +1082,16 @@ html_template = f'''<!DOCTYPE html>
     let ufSelecionada = null;
     let mapaLeaflet = null;
     let camadaMarcadores = null;
+
+    function escapeHtml(text) {{
+      if (text === null || text === undefined) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }}
 
     function alternarTema() {{
       const html = document.documentElement;
@@ -1284,11 +1294,11 @@ html_template = f'''<!DOCTYPE html>
 
         let popupContent = `
           <div class="popup-cidade">
-            <h3>${{c.n}} (${{c.uf}})</h3>
+            <h3>${{escapeHtml(c.n)}} (${{escapeHtml(c.uf)}})</h3>
             <p><strong>Candidato Predominante:</strong> ${{qtdLula >= qtdBols ? 'LULA (PT)' : 'BOLSONARO (PL)'}}</p>
             <p><strong>Seções 100% Absolutas:</strong> Lula: ${{c.s100_l}} | Bolsonaro: ${{c.s100_b}}</p>
             <p><strong>Seções ≥ 90% Hegemônicas:</strong> Lula: ${{c.s100_l + c.s90_l}} | Bolsonaro: ${{c.s100_b + c.s90_b}}</p>
-            ${{c.url ? `<p style="margin-top:8px;"><a href="${{c.url}}" target="_blank" class="btn-bu" style="display:inline-block; padding: 4px 10px;">Ver Boletim de Urna no TSE ↗</a></p>` : ''}}
+            ${{c.url ? `<p style="margin-top:8px;"><a href="${{encodeURI(c.url)}}" target="_blank" rel="noopener noreferrer" class="btn-bu" style="display:inline-block; padding: 4px 10px;">Ver Boletim de Urna no TSE ↗</a></p>` : ''}}
           </div>
         `;
 
@@ -1384,15 +1394,15 @@ html_template = f'''<!DOCTYPE html>
         let tr = document.createElement('tr');
         let pillClass = s.candidato === 'LULA' ? 'pill-lula' : 'pill-bolsonaro';
         tr.innerHTML = `
-          <td><strong>${{s.uf}}</strong></td>
-          <td>${{s.nome_municipio}}</td>
-          <td>${{s.zona}}</td>
-          <td>${{s.secao}}</td>
-          <td><span class="pill-cand ${{pillClass}}">${{s.candidato}}</span></td>
+          <td><strong>${{escapeHtml(s.uf)}}</strong></td>
+          <td>${{escapeHtml(s.nome_municipio)}}</td>
+          <td>${{escapeHtml(s.zona)}}</td>
+          <td>${{escapeHtml(s.secao)}}</td>
+          <td><span class="pill-cand ${{pillClass}}">${{escapeHtml(s.candidato)}}</span></td>
           <td><strong>${{s.percentual}}%</strong></td>
           <td>${{s.votos_nominais}}</td>
           <td>${{s.aptos}}</td>
-          <td><a href="${{s.url_tse}}" target="_blank" class="btn-bu">Ver no TSE ↗</a></td>
+          <td><a href="${{encodeURI(s.url_tse)}}" target="_blank" rel="noopener noreferrer" class="btn-bu">Ver no TSE ↗</a></td>
         `;
         tbody.appendChild(tr);
       }});
@@ -1448,8 +1458,8 @@ html_template = f'''<!DOCTYPE html>
       filtrados.forEach(e => {{
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><strong>${{e.uf}}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${{e.nome_uf}})</span></td>
-          <td><span style="font-size:0.8rem; background:var(--bg-secondary); padding:2px 8px; border-radius:4px;">${{e.regiao}}</span></td>
+          <td><strong>${{escapeHtml(e.uf)}}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">(${{escapeHtml(e.nome_uf)}})</span></td>
+          <td><span style="font-size:0.8rem; background:var(--bg-secondary); padding:2px 8px; border-radius:4px;">${{escapeHtml(e.regiao)}}</span></td>
           <td>${{e.lula_1t.toLocaleString('pt-BR')}}</td>
           <td>${{e.lula_2t.toLocaleString('pt-BR')}}</td>
           <td style="color:var(--lula-color); font-weight:700;">+${{e.delta_lula.toLocaleString('pt-BR')}}</td>
@@ -1458,8 +1468,8 @@ html_template = f'''<!DOCTYPE html>
           <td>${{e.bolsonaro_2t.toLocaleString('pt-BR')}}</td>
           <td>
             <div style="display:flex; gap:6px;">
-              <a href="${{e.url_painel_tse_1t}}" target="_blank" class="btn-tse-table sec" title="Ver 1º Turno no TSE">1ºT ↗</a>
-              <a href="${{e.url_painel_tse_2t}}" target="_blank" class="btn-tse-table" title="Ver 2º Turno no TSE">2ºT ↗</a>
+              <a href="${{encodeURI(e.url_painel_tse_1t)}}" target="_blank" rel="noopener noreferrer" class="btn-tse-table sec" title="Ver 1º Turno no TSE">1ºT ↗</a>
+              <a href="${{encodeURI(e.url_painel_tse_2t)}}" target="_blank" rel="noopener noreferrer" class="btn-tse-table" title="Ver 2º Turno no TSE">2ºT ↗</a>
             </div>
           </td>
         `;

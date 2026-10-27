@@ -13,3 +13,7 @@ __pycache__/
 *.log
 scratch/
 .tempmediaStorage/
+tmp/
+.cm_project
+.codemender/
+

@@ -7,15 +7,18 @@ Varre todas as seções de todos os 27 estados (+ DF e Exterior ZZ) para identif
 Gera datasets consolidados e dados para mapa de calor e gráficos comparativos.
 """
 
+from __future__ import annotations
+
+import csv
+import io
+import json
 import os
 import sys
-import csv
-import json
-import zipfile
-import io
+import urllib.error
 import urllib.request
+import zipfile
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 UFS_BRASIL = [
     "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -23,7 +26,7 @@ UFS_BRASIL = [
     "RO", "RR", "RS", "SC", "SE", "SP", "TO", "ZZ"
 ]
 
-def resolver_diretorio_zips():
+def resolver_diretorio_zips() -> str:
     for d in ["data/zips/tse", "../data/zips/tse", "zips_tse", "../zips_tse", "data/zips", "."]:
         if os.path.exists(d):
             return d
@@ -31,11 +34,23 @@ def resolver_diretorio_zips():
 
 DIRETORIO_ZIPS = resolver_diretorio_zips()
 
+def sanitize_csv_cell(val: Any) -> Any:
+    """
+    Previne Formula / DDE Injection (CWE-1236) em exportação de planilhas CSV.
+    """
+    if isinstance(val, str) and val:
+        if val[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return f"'{val}"
+    return val
+
 def baixar_uf(uf: str) -> str:
+    """
+    Realiza o download atômico e resiliente do arquivo de Boletim de Urna (BWEB) do TSE.
+    """
     os.makedirs(DIRETORIO_ZIPS, exist_ok=True)
     caminho_local = os.path.join(DIRETORIO_ZIPS, f"bweb_2t_{uf}_311020221535.zip")
-    
-    # Checa possíveis locais existentes
+
+    # Checa possíveis locais existentes com arquivo válido
     for candidato in [
         caminho_local,
         os.path.join("data", "zips", "tse", f"bweb_2t_{uf}_311020221535.zip"),
@@ -48,29 +63,44 @@ def baixar_uf(uf: str) -> str:
 
     url = f"https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2022/buweb/bweb_2t_{uf}_311020221535.zip"
     print(f"[{uf}] Baixando dados do TSE: {url} ...", flush=True)
+    caminho_tmp = f"{caminho_local}.tmp"
+
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=60) as resp, open(caminho_local, "wb") as f_out:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=60) as resp, open(caminho_tmp, "wb") as f_out:
             while True:
                 chunk = resp.read(1024 * 512)
                 if not chunk:
                     break
                 f_out.write(chunk)
+
+        # Download completado com sucesso: renomeia atomicamente
+        os.replace(caminho_tmp, caminho_local)
         print(f"[{uf}] Download concluído ({os.path.getsize(caminho_local) / 1024 / 1024:.1f} MB)", flush=True)
         return caminho_local
     except Exception as e:
-        print(f"[{uf}] ERRO ao baixar: {e}", file=sys.stderr)
-        if os.path.exists(caminho_local):
-            os.remove(caminho_local)
+        print(f"[{uf}] ERRO ao baixar dados oficiais do TSE: {e}", file=sys.stderr)
+        if os.path.exists(caminho_tmp):
+            try:
+                os.remove(caminho_tmp)
+            except OSError:
+                pass
         return ""
 
 def montar_url_tse(uf: str, mun: str, zona: str, secao: str) -> str:
-    return f"https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/{uf.lower()}/mu/{str(mun).zfill(5)}/zn/{str(zona).zfill(4)}/cargo/1/vis/nominal/se/{str(secao).zfill(4)}/dados-de-urna/boletim-de-urna"
+    """
+    Monta o link canônico do portal de resultados oficiais do TSE para a seção.
+    """
+    uf_clean = uf.lower().strip()
+    mun_clean = str(mun).zfill(5)
+    zona_clean = str(zona).zfill(4)
+    secao_clean = str(secao).zfill(4)
+    return f"https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/{uf_clean}/mu/{mun_clean}/zn/{zona_clean}/cargo/1/vis/nominal/se/{secao_clean}/dados-de-urna/boletim-de-urna"
 
-def processar_arquivo_uf(caminho_zip: str, uf: str) -> Tuple[Dict, List[Dict], List[Dict]]:
+def processar_arquivo_uf(caminho_zip: str, uf: str) -> Tuple[Dict[str, Any], List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
     Processa uma UF e retorna:
-    - Resumo da UF
+    - Resumo consolidado da UF
     - Lista de seções 100%
     - Lista de seções >= 90% (e < 100%)
     """
@@ -83,60 +113,89 @@ def processar_arquivo_uf(caminho_zip: str, uf: str) -> Tuple[Dict, List[Dict], L
         "brancos": 0, "nulos": 0, "aptos": 0, "comparecimento": 0
     })
 
-    with zipfile.ZipFile(caminho_zip, "r") as z:
-        csv_nomes = [f for f in z.namelist() if f.endswith(".csv")]
-        if not csv_nomes:
-            return {}, [], []
-        nome_csv = csv_nomes[0]
+    try:
+        with zipfile.ZipFile(caminho_zip, "r") as z:
+            csv_nomes = [f for f in z.namelist() if f.endswith(".csv")]
+            if not csv_nomes:
+                return {}, [], []
+            nome_csv = csv_nomes[0]
 
-        with z.open(nome_csv) as f:
-            text_io = io.TextIOWrapper(f, encoding="latin-1")
-            reader = csv.reader(text_io, delimiter=";")
-            header = [h.strip('\"') for h in next(reader)]
+            with z.open(nome_csv) as f:
+                text_io = io.TextIOWrapper(f, encoding="latin-1")
+                reader = csv.reader(text_io, delimiter=";")
+                header = [h.strip('\"') for h in next(reader)]
 
-            idx_cargo = header.index("CD_CARGO_PERGUNTA")
-            idx_mun = header.index("CD_MUNICIPIO")
-            idx_nom_mun = header.index("NM_MUNICIPIO")
-            idx_zona = header.index("NR_ZONA")
-            idx_secao = header.index("NR_SECAO")
-            idx_cand = header.index("NM_VOTAVEL")
-            idx_num_cand = header.index("NR_VOTAVEL")
-            idx_votos = header.index("QT_VOTOS")
-            idx_tipo = header.index("DS_TIPO_VOTAVEL")
-            idx_aptos = header.index("QT_APTOS")
-            idx_comp = header.index("QT_COMPARECIMENTO")
+                def achar_idx(coluna_cand: List[str]) -> int:
+                    for col in coluna_cand:
+                        if col in header:
+                            return header.index(col)
+                    return -1
 
-            for row in reader:
-                if not row or len(row) <= idx_votos:
-                    continue
-                if row[idx_cargo] != "1": # 1 = Presidente
-                    continue
+                idx_cargo = achar_idx(["CD_CARGO_PERGUNTA", "CD_CARGO"])
+                idx_mun = achar_idx(["CD_MUNICIPIO"])
+                idx_nom_mun = achar_idx(["NM_MUNICIPIO"])
+                idx_zona = achar_idx(["NR_ZONA"])
+                idx_secao = achar_idx(["NR_SECAO"])
+                idx_cand = achar_idx(["NM_VOTAVEL"])
+                idx_num_cand = achar_idx(["NR_VOTAVEL"])
+                idx_votos = achar_idx(["QT_VOTOS"])
+                idx_tipo = achar_idx(["DS_TIPO_VOTAVEL"])
+                idx_aptos = achar_idx(["QT_APTOS"])
+                idx_comp = achar_idx(["QT_COMPARECIMENTO"])
 
-                chave = (row[idx_mun], row[idx_zona], row[idx_secao])
-                s = secoes[chave]
-                s["mun"] = row[idx_mun]
-                s["nome_mun"] = row[idx_nom_mun]
-                s["zona"] = row[idx_zona]
-                s["secao"] = row[idx_secao]
-                s["aptos"] = int(row[idx_aptos])
-                s["comparecimento"] = int(row[idx_comp])
+                indices_obrigatorios = [idx_cargo, idx_mun, idx_zona, idx_secao, idx_votos]
+                if any(idx < 0 for idx in indices_obrigatorios):
+                    print(f"[{uf}] Header com colunas ausentes no CSV do TSE.", file=sys.stderr)
+                    return {}, [], []
 
-                tipo = row[idx_tipo]
-                cand = row[idx_cand].upper()
-                num_cand = row[idx_num_cand]
-                votos = int(row[idx_votos])
+                for row in reader:
+                    if not row or len(row) <= idx_votos:
+                        continue
+                    if row[idx_cargo] != "1":  # 1 = Presidente
+                        continue
 
-                if tipo == "Branco":
-                    s["brancos"] += votos
-                elif tipo == "Nulo":
-                    s["nulos"] += votos
-                elif tipo == "Nominal":
-                    if "LULA" in cand or num_cand == "13":
-                        s["votos_lula"] += votos
-                    elif "BOLSONARO" in cand or num_cand == "22":
-                        s["votos_bolsonaro"] += votos
+                    chave = (row[idx_mun], row[idx_zona], row[idx_secao])
+                    s = secoes[chave]
+                    s["mun"] = row[idx_mun]
+                    s["nome_mun"] = row[idx_nom_mun] if idx_nom_mun >= 0 and len(row) > idx_nom_mun else ""
+                    s["zona"] = row[idx_zona]
+                    s["secao"] = row[idx_secao]
+
+                    if idx_aptos >= 0 and len(row) > idx_aptos:
+                        try:
+                            s["aptos"] = int(row[idx_aptos])
+                        except (ValueError, TypeError):
+                            s["aptos"] = 0
+
+                    if idx_comp >= 0 and len(row) > idx_comp:
+                        try:
+                            s["comparecimento"] = int(row[idx_comp])
+                        except (ValueError, TypeError):
+                            s["comparecimento"] = 0
+
+                    tipo = row[idx_tipo] if idx_tipo >= 0 and len(row) > idx_tipo else ""
+                    cand = row[idx_cand].upper() if idx_cand >= 0 and len(row) > idx_cand else ""
+                    num_cand = row[idx_num_cand] if idx_num_cand >= 0 and len(row) > idx_num_cand else ""
+
+                    try:
+                        votos = int(row[idx_votos])
+                    except (ValueError, TypeError):
+                        votos = 0
+
+                    if tipo == "Branco" or cand == "BRANCO":
+                        s["brancos"] += votos
+                    elif tipo == "Nulo" or cand == "NULO":
+                        s["nulos"] += votos
                     else:
-                        s["votos_outros"] += votos
+                        if "LULA" in cand or num_cand == "13":
+                            s["votos_lula"] += votos
+                        elif "BOLSONARO" in cand or num_cand == "22":
+                            s["votos_bolsonaro"] += votos
+                        else:
+                            s["votos_outros"] += votos
+    except (zipfile.BadZipFile, OSError) as e:
+        print(f"[{uf}] Erro ao ler arquivo compactado: {e}", file=sys.stderr)
+        return {}, [], []
 
     total_secoes = len(secoes)
     secoes_100_lula = []
@@ -157,11 +216,11 @@ def processar_arquivo_uf(caminho_zip: str, uf: str) -> Tuple[Dict, List[Dict], L
         total_votos_lula += v_lula
         total_votos_bolsonaro += v_bols
 
-        if v_nominais == 0:
+        if v_nominais <= 0:
             continue
 
-        pct_lula = v_lula / v_nominais
-        pct_bols = v_bols / v_nominais
+        pct_lula = (v_lula / v_nominais) if v_nominais > 0 else 0.0
+        pct_bols = (v_bols / v_nominais) if v_nominais > 0 else 0.0
         url = montar_url_tse(uf, s["mun"], s["zona"], s["secao"])
 
         info_secao = {
@@ -191,11 +250,11 @@ def processar_arquivo_uf(caminho_zip: str, uf: str) -> Tuple[Dict, List[Dict], L
             lista_100.append(item)
         # >= 90% e < 100%
         elif pct_lula >= 0.90:
-            item = dict(info_secao, candidato="LULA", percentual=round(pct_lula * 100, 2))
+            item = dict(info_secao, candidato="LULA", percentual=round(pct_lula * 100.0, 2))
             secoes_90_lula.append(item)
             lista_90.append(item)
         elif pct_bols >= 0.90:
-            item = dict(info_secao, candidato="JAIR BOLSONARO", percentual=round(pct_bols * 100, 2))
+            item = dict(info_secao, candidato="JAIR BOLSONARO", percentual=round(pct_bols * 100.0, 2))
             secoes_90_bolsonaro.append(item)
             lista_90.append(item)
 
@@ -216,7 +275,7 @@ def processar_arquivo_uf(caminho_zip: str, uf: str) -> Tuple[Dict, List[Dict], L
 
     return resumo, lista_100, lista_90
 
-def main():
+def main() -> None:
     print("=" * 80)
     print("INICIANDO PROCESSAMENTO NACIONAL DAS ELEIÇÕES - TODAS AS UFs DO BRASIL")
     print("=" * 80)
@@ -233,6 +292,10 @@ def main():
             continue
 
         resumo, l_100, l_90 = processar_arquivo_uf(zip_path, uf)
+        if not resumo:
+            print(f"[{uf}] Resumo vazio ou falha na leitura.", file=sys.stderr)
+            continue
+
         resumos_uf.append(resumo)
         todas_100.extend(l_100)
         todas_90.extend(l_90)
@@ -249,53 +312,61 @@ def main():
             dir_saida = d
             break
 
-    # Exportar Resumo por UF
-    with open(os.path.join(dir_saida, "brasil_resumo_secoes_por_uf.csv"), "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=[
+    # Exportar Resumo por UF com sanitização de fórmula
+    caminho_resumo = os.path.join(dir_saida, "brasil_resumo_secoes_por_uf.csv")
+    with open(caminho_resumo, "w", newline="", encoding="utf-8") as f:
+        colunas = [
             "uf", "total_secoes", "votos_lula", "votos_bolsonaro",
             "secoes_100_lula", "secoes_100_bolsonaro", "secoes_100_total",
             "secoes_90_lula", "secoes_90_bolsonaro", "secoes_90_total",
             "secoes_90_mais_100_lula", "secoes_90_mais_100_bolsonaro"
-        ])
+        ]
+        writer = csv.DictWriter(f, fieldnames=colunas)
         writer.writeheader()
         for r in resumos_uf:
-            writer.writerow(r)
+            sanitized = {k: sanitize_csv_cell(v) for k, v in r.items()}
+            writer.writerow(sanitized)
 
     # Exportar Seções 100%
-    with open(os.path.join(dir_saida, "brasil_secoes_100pct.csv"), "w", newline="", encoding="utf-8") as f:
+    caminho_100 = os.path.join(dir_saida, "brasil_secoes_100pct.csv")
+    with open(caminho_100, "w", newline="", encoding="utf-8") as f:
         if todas_100:
             writer = csv.DictWriter(f, fieldnames=list(todas_100[0].keys()))
             writer.writeheader()
             for s in todas_100:
-                writer.writerow(s)
+                sanitized_s = {k: sanitize_csv_cell(v) for k, v in s.items()}
+                writer.writerow(sanitized_s)
 
     # Exportar Seções 90%
-    with open(os.path.join(dir_saida, "brasil_secoes_90pct.csv"), "w", newline="", encoding="utf-8") as f:
+    caminho_90 = os.path.join(dir_saida, "brasil_secoes_90pct.csv")
+    with open(caminho_90, "w", newline="", encoding="utf-8") as f:
         if todas_90:
             writer = csv.DictWriter(f, fieldnames=list(todas_90[0].keys()))
             writer.writeheader()
             for s in todas_90:
-                writer.writerow(s)
+                sanitized_s = {k: sanitize_csv_cell(v) for k, v in s.items()}
+                writer.writerow(sanitized_s)
 
     # Exportar JSON consolidado para visualização
     dados_dashboard = {
         "resumos_uf": resumos_uf,
         "totais_brasil": {
-            "total_secoes": sum(r["total_secoes"] for r in resumos_uf),
-            "votos_lula": sum(r["votos_lula"] for r in resumos_uf),
-            "votos_bolsonaro": sum(r["votos_bolsonaro"] for r in resumos_uf),
-            "secoes_100_lula": sum(r["secoes_100_lula"] for r in resumos_uf),
-            "secoes_100_bolsonaro": sum(r["secoes_100_bolsonaro"] for r in resumos_uf),
-            "secoes_90_lula": sum(r["secoes_90_lula"] for r in resumos_uf),
-            "secoes_90_bolsonaro": sum(r["secoes_90_bolsonaro"] for r in resumos_uf),
-            "secoes_90_mais_100_lula": sum(r["secoes_90_mais_100_lula"] for r in resumos_uf),
-            "secoes_90_mais_100_bolsonaro": sum(r["secoes_90_mais_100_bolsonaro"] for r in resumos_uf),
+            "total_secoes": sum(r["total_secoes"] for r in resumos_uf) if resumos_uf else 0,
+            "votos_lula": sum(r["votos_lula"] for r in resumos_uf) if resumos_uf else 0,
+            "votos_bolsonaro": sum(r["votos_bolsonaro"] for r in resumos_uf) if resumos_uf else 0,
+            "secoes_100_lula": sum(r["secoes_100_lula"] for r in resumos_uf) if resumos_uf else 0,
+            "secoes_100_bolsonaro": sum(r["secoes_100_bolsonaro"] for r in resumos_uf) if resumos_uf else 0,
+            "secoes_90_lula": sum(r["secoes_90_lula"] for r in resumos_uf) if resumos_uf else 0,
+            "secoes_90_bolsonaro": sum(r["secoes_90_bolsonaro"] for r in resumos_uf) if resumos_uf else 0,
+            "secoes_90_mais_100_lula": sum(r["secoes_90_mais_100_lula"] for r in resumos_uf) if resumos_uf else 0,
+            "secoes_90_mais_100_bolsonaro": sum(r["secoes_90_mais_100_bolsonaro"] for r in resumos_uf) if resumos_uf else 0,
         },
         "secoes_100_amostra": todas_100,
-        "secoes_90_amostra": todas_90[:500] # primeiras 500 para visualização interativa rápida
+        "secoes_90_amostra": todas_90[:500]
     }
 
-    with open(os.path.join(dir_saida, "dados_mapa_calor.json"), "w", encoding="utf-8") as f_json:
+    caminho_json = os.path.join(dir_saida, "dados_mapa_calor.json")
+    with open(caminho_json, "w", encoding="utf-8") as f_json:
         json.dump(dados_dashboard, f_json, ensure_ascii=False, indent=2)
 
     print("\n" + "=" * 80)

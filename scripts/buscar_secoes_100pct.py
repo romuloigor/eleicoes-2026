@@ -4,45 +4,52 @@ Buscador de Seções Eleitorais com 100% de Votos para um Único Candidato (TSE)
 Processa arquivos consolidados de Boletim de Urna (BWEB) dos Dados Abertos do TSE.
 """
 
+from __future__ import annotations
+
+import csv
+import io
 import os
 import sys
-import csv
 import zipfile
-import urllib.request
 from collections import defaultdict
-
-URL_BASE_DADOS_ABERTOS = "https://cdn.tse.jus.br/estatistica/sead/eleicoes/eleicoes2022/buweb/bweb_2t_{uf}_311020221535.zip"
+from typing import Any, Dict, List, Optional
 
 def montar_url_portal_tse(uf: str, cod_mun: str, zona: str, secao: str, pleito: str = "6258") -> str:
     """
     Gera a URL oficial interativa do portal Resultados do TSE para o Boletim de Urna da seção.
     """
-    uf = uf.lower()
-    cod_mun = str(cod_mun).zfill(5)
-    zona = str(zona).zfill(4)
-    secao = str(secao).zfill(4)
-    return f"https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/{pleito}/uf/{uf}/mu/{cod_mun}/zn/{zona}/cargo/1/vis/nominal/se/{secao}/dados-de-urna/boletim-de-urna"
+    uf_clean = uf.lower().strip()
+    cod_mun_clean = str(cod_mun).zfill(5)
+    zona_clean = str(zona).zfill(4)
+    secao_clean = str(secao).zfill(4)
+    return f"https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/{pleito}/uf/{uf_clean}/mu/{cod_mun_clean}/zn/{zona_clean}/cargo/1/vis/nominal/se/{secao_clean}/dados-de-urna/boletim-de-urna"
 
-def analisar_bweb_arquivo(caminho_zip_ou_csv: str, cargo_filtro: str = "1"):
+def analisar_bweb_arquivo(caminho_zip_ou_csv: str, cargo_filtro: str = "1") -> List[Dict[str, Any]]:
     """
     Lê o arquivo BWEB (Boletim de Urna na Web) do 2º turno do TSE e encontra seções 100%.
     Cargo '1' = Presidente.
     """
+    if not os.path.exists(caminho_zip_ou_csv):
+        raise FileNotFoundError(f"Arquivo não encontrado: {caminho_zip_ou_csv}")
+
     secoes = defaultdict(lambda: {
         "uf": "", "municipio": "", "nome_municipio": "", "zona": "", "secao": "",
         "votos_candidatos": defaultdict(int), "brancos": 0, "nulos": 0, "total_nominais": 0
     })
 
-    def processar_leitor(reader, colunas):
-        idx_cargo = colunas.index("CD_CARGO_PERGUNTA") if "CD_CARGO_PERGUNTA" in colunas else colunas.index("CD_CARGO")
-        idx_uf = colunas.index("SG_UF")
-        idx_mun = colunas.index("CD_MUNICIPIO")
+    def processar_leitor(reader: Any, colunas: List[str]) -> None:
+        idx_cargo = colunas.index("CD_CARGO_PERGUNTA") if "CD_CARGO_PERGUNTA" in colunas else (colunas.index("CD_CARGO") if "CD_CARGO" in colunas else -1)
+        idx_uf = colunas.index("SG_UF") if "SG_UF" in colunas else -1
+        idx_mun = colunas.index("CD_MUNICIPIO") if "CD_MUNICIPIO" in colunas else -1
         idx_nom_mun = colunas.index("NM_MUNICIPIO") if "NM_MUNICIPIO" in colunas else None
-        idx_zona = colunas.index("NR_ZONA")
-        idx_secao = colunas.index("NR_SECAO")
-        idx_cand = colunas.index("NM_VOTAVEL") if "NM_VOTAVEL" in colunas else colunas.index("NR_VOTAVEL")
-        idx_votos = colunas.index("QT_VOTOS")
+        idx_zona = colunas.index("NR_ZONA") if "NR_ZONA" in colunas else -1
+        idx_secao = colunas.index("NR_SECAO") if "NR_SECAO" in colunas else -1
+        idx_cand = colunas.index("NM_VOTAVEL") if "NM_VOTAVEL" in colunas else (colunas.index("NR_VOTAVEL") if "NR_VOTAVEL" in colunas else -1)
+        idx_votos = colunas.index("QT_VOTOS") if "QT_VOTOS" in colunas else -1
         idx_tipo = colunas.index("DS_TIPO_VOTAVEL") if "DS_TIPO_VOTAVEL" in colunas else None
+
+        if any(i < 0 for i in (idx_cargo, idx_uf, idx_mun, idx_zona, idx_secao, idx_cand, idx_votos)):
+            return
 
         for linha in reader:
             if not linha or len(linha) <= max(idx_cargo, idx_uf, idx_votos):
@@ -53,12 +60,17 @@ def analisar_bweb_arquivo(caminho_zip_ou_csv: str, cargo_filtro: str = "1"):
 
             uf = linha[idx_uf]
             mun = linha[idx_mun]
-            nome_mun = linha[idx_nom_mun] if idx_nom_mun else ""
+            nome_mun = linha[idx_nom_mun] if idx_nom_mun is not None and len(linha) > idx_nom_mun else ""
             zona = linha[idx_zona]
             secao = linha[idx_secao]
             cand = linha[idx_cand]
-            qtd = int(linha[idx_votos])
-            tipo = linha[idx_tipo].lower() if idx_tipo else ""
+
+            try:
+                qtd = int(linha[idx_votos])
+            except (ValueError, TypeError):
+                qtd = 0
+
+            tipo = linha[idx_tipo].lower() if idx_tipo is not None and len(linha) > idx_tipo else ""
 
             chave = (uf, mun, zona, secao)
             sec = secoes[chave]
@@ -76,21 +88,24 @@ def analisar_bweb_arquivo(caminho_zip_ou_csv: str, cargo_filtro: str = "1"):
                 sec["votos_candidatos"][cand] += qtd
                 sec["total_nominais"] += qtd
 
-    if caminho_zip_ou_csv.endswith(".zip"):
-        with zipfile.ZipFile(caminho_zip_ou_csv, "r") as z:
-            for nome_arq in z.namelist():
-                if nome_arq.endswith(".csv"):
-                    with z.open(nome_arq) as f:
-                        import io
-                        text_f = io.TextIOWrapper(f, encoding="latin-1")
-                        reader = csv.reader(text_f, delimiter=";")
-                        header = next(reader)
-                        processar_leitor(reader, header)
-    else:
-        with open(caminho_zip_ou_csv, "r", encoding="latin-1") as f:
-            reader = csv.reader(f, delimiter=";")
-            header = next(reader)
-            processar_leitor(reader, header)
+    try:
+        if caminho_zip_ou_csv.endswith(".zip"):
+            with zipfile.ZipFile(caminho_zip_ou_csv, "r") as z:
+                for nome_arq in z.namelist():
+                    if nome_arq.endswith(".csv"):
+                        with z.open(nome_arq) as f:
+                            text_f = io.TextIOWrapper(f, encoding="latin-1")
+                            reader = csv.reader(text_f, delimiter=";")
+                            header = next(reader)
+                            processar_leitor(reader, header)
+        else:
+            with open(caminho_zip_ou_csv, "r", encoding="latin-1") as f:
+                reader = csv.reader(f, delimiter=";")
+                header = next(reader)
+                processar_leitor(reader, header)
+    except (zipfile.BadZipFile, OSError) as e:
+        print(f"[ERRO] Falha ao processar arquivo BWEB: {e}", file=sys.stderr)
+        return []
 
     # Filtrar seções 100%
     secoes_100 = []

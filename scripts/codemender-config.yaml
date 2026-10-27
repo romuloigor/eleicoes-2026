@@ -1,0 +1,71 @@
+# =============================================================================
+# Google CodeMender (cm) — Configuração para local-eleicoes-2026
+# =============================================================================
+# Repositório de Auditoria e Ciência de Dados Eleitorais (TSE 2022/2026)
+# =============================================================================
+
+api:
+  endpoint: "https://aiplatform.googleapis.com"
+  project: "prj-gemini-integration-oecx8"
+  location: "global"
+  model: "gemini-3.8-flash-cyber"
+
+build:
+  # Validação passiva de integridade e compilação de código
+  command: "python3 -m py_compile scripts/*.py"
+  timeout: "2m"
+
+rigor_level: "strict"
+fail_on_severity: "MEDIUM"
+
+enforce_rules:
+  require_subprocess_timeout: true
+  prevent_csv_injection: true
+  strict_log_sanitization: true
+  forbid_dangerous_functions: true
+  require_tls_verification: true
+  prevent_dom_xss: true
+  prevent_reverse_tabnabbing: true
+
+scan:
+  exclude_dirs:
+    - ".git"
+    - ".vscode"
+    - "venv"
+    - ".venv"
+    - "__pycache__"
+    - "node_modules"
+    - "tmp"
+    - "data/zips"
+    - "data/raw"
+  exclude_patterns:
+    - "*.min.js"
+    - "*.bundle.js"
+    - "*.lock"
+    - "*.zip"
+    - "*.jez"
+    - "*.dat"
+    - "*.png"
+    - "*.webp"
+    - "*.jpg"
+    - "*.csv"
+  extensions:
+    include:
+      - ".py"
+      - ".sh"
+      - ".html"
+      - ".js"
+      - ".json"
+      - ".yaml"
+      - ".yml"
+      - ".md"
+    exclude: []
+  max_file_size: 2097152
+
+verify:
+  require_reproduction: true
+  timeout: "3m"
+
+report:
+  format: "markdown"
+  include_unverified: true

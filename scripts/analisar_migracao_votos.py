@@ -3,17 +3,23 @@
 Pipeline de Auditoria e Análise de Migração Eleitoral:
 Compara o 1º Turno (Eleição 6257) e o 2º Turno (Eleição 6258) das Eleições Oficiais do TSE.
 Investiga e quantifica com exatidão matemática:
-De onde vieram os +10.376.694 votos (~10,4M / ~11M) conquistados pelo candidato Lula no 2º Turno?
+De onde vieram os +10.376.694 votos (~10,4M) conquistados pelo candidato Lula no 2º Turno?
 
 Gera:
 - data/processed/analise_migracao_lula_1t_2t.csv
 - data/processed/decomposicao_votos_brasil.json
 """
 
-import urllib.request
-import json
+from __future__ import annotations
+
 import csv
+import json
 import os
+import sys
+import time
+import urllib.error
+import urllib.request
+from typing import Any, Dict, List, Optional
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
@@ -46,34 +52,69 @@ REGIOES = {
     "SE": "Nordeste", "SP": "Sudeste", "TO": "Norte", "ZZ": "Exterior"
 }
 
-def fetch_tse_json(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode())
+def sanitize_csv_cell(val: Any) -> Any:
+    """
+    Previne Formula / DDE Injection (CWE-1236) em células exportadas para CSV.
+    Prefixa valores que iniciam com '=', '+', '-', '@', '\t', '\r' com uma aspas simples.
+    """
+    if isinstance(val, str) and val:
+        if val[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return f"'{val}"
+    return val
 
-def get_cand_votes(d, num):
+def fetch_tse_json(url: str, retries: int = 3, timeout_seconds: int = 20) -> Dict[str, Any]:
+    """
+    Realiza requisição HTTP GET com timeout estrito e retry resiliente contra falhas de rede.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    for attempt in range(1, retries + 1):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
+                data = resp.read().decode("utf-8")
+                return json.loads(data)
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
+            if attempt == retries:
+                raise RuntimeError(f"Falha ao obter JSON oficial do TSE ({url}) após {retries} tentativas: {e}") from e
+            time.sleep(1.0 * attempt)
+    return {}
+
+def get_cand_votes(d: Dict[str, Any], num: str) -> int:
+    """
+    Extrai com segurança a contagem de votos nominais de um candidato pelo número.
+    """
     for ag in d.get("carg", [{}])[0].get("agr", []):
         for p in ag.get("par", []):
             for c in p.get("cand", []):
                 if str(c.get("n")) == str(num):
-                    return int(c.get("vap", 0))
+                    try:
+                        return int(c.get("vap", 0))
+                    except (ValueError, TypeError):
+                        return 0
     return 0
 
-def extrair_todos_candidatos(d):
+def extrair_todos_candidatos(d: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Extrai a lista ordenada de todos os candidatos votados na apuração.
+    """
     cands = []
     for ag in d.get("carg", [{}])[0].get("agr", []):
         for p in ag.get("par", []):
             for c in p.get("cand", []):
+                try:
+                    votos = int(c.get("vap", 0))
+                except (ValueError, TypeError):
+                    votos = 0
                 cands.append({
-                    "numero": str(c.get("n")),
-                    "nome": c.get("nm"),
-                    "votos": int(c.get("vap", 0)),
-                    "pct": c.get("pvap")
+                    "numero": str(c.get("n", "")),
+                    "nome": str(c.get("nm", "")),
+                    "votos": votos,
+                    "pct": c.get("pvap", "0,00")
                 })
     cands.sort(key=lambda x: x["votos"], reverse=True)
     return cands
 
-def main():
+def main() -> None:
     print("=" * 80)
     print("COLETANDO DADOS OFICIAIS DO TSE: 1º TURNO (6257) vs 2º TURNO (6258)")
     print("=" * 80)
@@ -83,23 +124,27 @@ def main():
     url_br_2t = "https://resultados.tse.jus.br/oficial/ele2026/6258/dados/br/br-c0001-e006258-u.json"
 
     print("Baixando totalização nacional...")
-    d_br_1t = fetch_tse_json(url_br_1t)
-    d_br_2t = fetch_tse_json(url_br_2t)
+    try:
+        d_br_1t = fetch_tse_json(url_br_1t)
+        d_br_2t = fetch_tse_json(url_br_2t)
+    except Exception as e:
+        print(f"[ERRO CRÍTICO] Falha ao coletar dados nacionais: {e}", file=sys.stderr)
+        sys.exit(1)
 
     lula_br_1t = get_cand_votes(d_br_1t, "13")
     lula_br_2t = get_cand_votes(d_br_2t, "13")
     bols_br_1t = get_cand_votes(d_br_1t, "22")
     bols_br_2t = get_cand_votes(d_br_2t, "22")
 
-    comp_1t = int(d_br_1t["e"]["c"])
-    comp_2t = int(d_br_2t["e"]["c"])
-    abs_1t = int(d_br_1t["e"]["a"])
-    abs_2t = int(d_br_2t["e"]["a"])
+    comp_1t = int(d_br_1t.get("e", {}).get("c", 0))
+    comp_2t = int(d_br_2t.get("e", {}).get("c", 0))
+    abs_1t = int(d_br_1t.get("e", {}).get("a", 0))
+    abs_2t = int(d_br_2t.get("e", {}).get("a", 0))
 
-    brancos_1t = int(d_br_1t["v"]["vb"])
-    brancos_2t = int(d_br_2t["v"]["vb"])
-    nulos_1t = int(d_br_1t["v"]["vn"])
-    nulos_2t = int(d_br_2t["v"]["vn"])
+    brancos_1t = int(d_br_1t.get("v", {}).get("vb", 0))
+    brancos_2t = int(d_br_2t.get("v", {}).get("vb", 0))
+    nulos_1t = int(d_br_1t.get("v", {}).get("vn", 0))
+    nulos_2t = int(d_br_2t.get("v", {}).get("vn", 0))
 
     candidatos_1t = extrair_todos_candidatos(d_br_1t)
     terceiros_1t = [c for c in candidatos_1t if c["numero"] not in ["13", "22"]]
@@ -108,8 +153,11 @@ def main():
     delta_lula_nacional = lula_br_2t - lula_br_1t
     delta_bols_nacional = bols_br_2t - bols_br_1t
 
-    print(f"\n[BRASIL] Lula 1ºT: {lula_br_1t:,} | 2ºT: {lula_br_2t:,} | Ganho: +{delta_lula_nacional:,} votos (+{(delta_lula_nacional/lula_br_1t)*100:.2f}%)")
-    print(f"[BRASIL] Bolsonaro 1ºT: {bols_br_1t:,} | 2ºT: {bols_br_2t:,} | Ganho: +{delta_bols_nacional:,} votos (+{(delta_bols_nacional/bols_br_1t)*100:.2f}%)")
+    pct_lula_cresc_br = ((delta_lula_nacional / lula_br_1t) * 100.0) if lula_br_1t > 0 else 0.0
+    pct_bols_cresc_br = ((delta_bols_nacional / bols_br_1t) * 100.0) if bols_br_1t > 0 else 0.0
+
+    print(f"\n[BRASIL] Lula 1ºT: {lula_br_1t:,} | 2ºT: {lula_br_2t:,} | Ganho: +{delta_lula_nacional:,} votos (+{pct_lula_cresc_br:.2f}%)")
+    print(f"[BRASIL] Bolsonaro 1ºT: {bols_br_1t:,} | 2ºT: {bols_br_2t:,} | Ganho: +{delta_bols_nacional:,} votos (+{pct_bols_cresc_br:.2f}%)")
     print(f"[BRASIL] Terceiros candidatos no 1ºT: {votos_terceiros_1t:,} votos")
     print(f"[BRASIL] Mobilização de eleitores (queda abstenção): +{comp_2t - comp_1t:,} votantes a mais")
     print(f"[BRASIL] Redução de votos brancos e nulos: +{(brancos_1t - brancos_2t) + (nulos_1t - nulos_2t):,} votos nominais")
@@ -122,7 +170,7 @@ def main():
         uf_upper = uf.upper()
         url_uf_1t = f"https://resultados.tse.jus.br/oficial/ele2026/6257/dados/{uf}/{uf}-c0001-e006257-u.json"
         url_uf_2t = f"https://resultados.tse.jus.br/oficial/ele2026/6258/dados/{uf}/{uf}-c0001-e006258-u.json"
-        
+
         try:
             d1 = fetch_tse_json(url_uf_1t)
             d2 = fetch_tse_json(url_uf_2t)
@@ -147,7 +195,8 @@ def main():
 
             delta_l = l2 - l1
             delta_b = b2 - b1
-            pct_cresc_lula = (delta_l / l1 * 100) if l1 else 0
+            pct_cresc_lula = ((delta_l / l1) * 100.0) if l1 > 0 else 0.0
+            participacao_ganho_nacional = ((delta_l / delta_lula_nacional) * 100.0) if delta_lula_nacional > 0 else 0.0
 
             url_painel_1t = f"https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6257/escrutinio/totalizacao/cargo/1/vis/nominal/ordem/v/consolidado/{uf}"
             url_painel_2t = f"https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/escrutinio/totalizacao/cargo/1/vis/nominal/ordem/v/consolidado/{uf}"
@@ -160,7 +209,7 @@ def main():
                 "lula_2t": l2,
                 "delta_lula": delta_l,
                 "pct_crescimento_lula": round(pct_cresc_lula, 2),
-                "participacao_ganho_nacional_pct": round((delta_l / delta_lula_nacional) * 100, 2),
+                "participacao_ganho_nacional_pct": round(participacao_ganho_nacional, 2),
                 "bolsonaro_1t": b1,
                 "bolsonaro_2t": b2,
                 "delta_bolsonaro": delta_b,
@@ -180,15 +229,15 @@ def main():
                 "api_json_tse_1t": url_uf_1t,
                 "api_json_tse_2t": url_uf_2t
             })
-            print(f"  [{uf_upper}] OK: +{delta_l:,} votos para Lula ({round((delta_l/delta_lula_nacional)*100, 1)}% nacional)")
+            print(f"  [{uf_upper}] OK: +{delta_l:,} votos para Lula ({round(participacao_ganho_nacional, 1)}% nacional)")
         except Exception as e:
-            print(f"  [{uf_upper}] ERRO: {e}")
+            print(f"  [{uf_upper}] ERRO: {e}", file=sys.stderr)
 
     # Ordenar estados por maior ganho de votos para Lula
     estados_dados.sort(key=lambda x: x["delta_lula"], reverse=True)
 
     # 3. Análise Regional
-    por_regiao = {}
+    por_regiao: Dict[str, Dict[str, Any]] = {}
     for r in estados_dados:
         reg = r["regiao"]
         if reg not in por_regiao:
@@ -210,12 +259,14 @@ def main():
 
     resumo_regional = []
     for reg, dados in por_regiao.items():
-        dados["participacao_ganho_nacional_pct"] = round((dados["delta_lula"] / delta_lula_nacional) * 100, 2)
-        dados["pct_crescimento_lula"] = round((dados["delta_lula"] / dados["lula_1t"]) * 100, 2)
+        part_ganho_reg = ((dados["delta_lula"] / delta_lula_nacional) * 100.0) if delta_lula_nacional > 0 else 0.0
+        pct_cresc_reg = ((dados["delta_lula"] / dados["lula_1t"]) * 100.0) if dados["lula_1t"] > 0 else 0.0
+        dados["participacao_ganho_nacional_pct"] = round(part_ganho_reg, 2)
+        dados["pct_crescimento_lula"] = round(pct_cresc_reg, 2)
         resumo_regional.append(dados)
     resumo_regional.sort(key=lambda x: x["delta_lula"], reverse=True)
 
-    # 4. Exportar CSV
+    # 4. Exportar CSV com Sanitização Anti-Injeção
     caminho_csv = os.path.join(DIR_PROCESSED, "analise_migracao_lula_1t_2t.csv")
     with open(caminho_csv, "w", newline="", encoding="utf-8") as f:
         colunas = [
@@ -228,9 +279,14 @@ def main():
         writer = csv.DictWriter(f, fieldnames=colunas, extrasaction="ignore")
         writer.writeheader()
         for r in estados_dados:
-            writer.writerow(r)
+            sanitized_row = {k: sanitize_csv_cell(v) for k, v in r.items()}
+            writer.writerow(sanitized_row)
 
     # 5. Exportar JSON Completo de Decomposição
+    soma_deltas = delta_lula_nacional + delta_bols_nacional
+    pct_lula_capturou = round(((delta_lula_nacional / soma_deltas) * 100.0), 2) if soma_deltas > 0 else 0.0
+    pct_bols_capturou = round(((delta_bols_nacional / soma_deltas) * 100.0), 2) if soma_deltas > 0 else 0.0
+
     decomposicao = {
         "nacional": {
             "eleicao_1t": {
@@ -259,12 +315,12 @@ def main():
             },
             "ganho_lula": {
                 "votos_absolutos": delta_lula_nacional,
-                "pct_crescimento": round((delta_lula_nacional / lula_br_1t) * 100, 2),
+                "pct_crescimento": round(pct_lula_cresc_br, 2),
                 "descricao": "Ganho líquido oficial de +10.376.694 votos (~10,4 milhões) de Lula entre o 1º e 2º Turno."
             },
             "ganho_bolsonaro": {
                 "votos_absolutos": delta_bols_nacional,
-                "pct_crescimento": round((delta_bols_nacional / bols_br_1t) * 100, 2)
+                "pct_crescimento": round(pct_bols_cresc_br, 2)
             },
             "reservatorio_votos_em_disputa": {
                 "votos_terceiros_1t": votos_terceiros_1t,
@@ -272,8 +328,8 @@ def main():
                 "migracao_brancos": brancos_1t - brancos_2t,
                 "migracao_nulos": nulos_1t - nulos_2t,
                 "total_disponivel": votos_terceiros_1t + (comp_2t - comp_1t) + (brancos_1t - brancos_2t) + (nulos_1t - nulos_2t),
-                "lula_capturou_pct": round((delta_lula_nacional / (delta_lula_nacional + delta_bols_nacional)) * 100, 2),
-                "bolsonaro_capturou_pct": round((delta_bols_nacional / (delta_lula_nacional + delta_bols_nacional)) * 100, 2)
+                "lula_capturou_pct": pct_lula_capturou,
+                "bolsonaro_capturou_pct": pct_bols_capturou
             },
             "terceiros_candidatos_1t": terceiros_1t
         },
