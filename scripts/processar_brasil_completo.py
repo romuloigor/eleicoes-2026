@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
-Pipeline Nacional: Processamento Completo de Seções Eleitorais do Brasil (TSE 2º Turno 2026)
-Eleição Ordinária Federal 2026 - 2º Turno (Eleição 6258 / Pleito 3221)
+Pipeline Nacional: Processamento Completo de Seções Eleitorais do Brasil (TSE 2026)
+Eleição Ordinária Federal 2026 - 1º Turno (Eleição 6257) e 2º Turno (Eleição 6258)
 Varre todas as seções de todas as 28 UFs (26 estados + DF + Exterior ZZ) para catalogar:
-- Seções 100% Absoluto (Lula 13 e Flávio Bolsonaro 22)
-- Seções >= 90% Absoluto (Lula 13 e Flávio Bolsonaro 22)
-Gera datasets consolidados e dados para mapa de calor, geocodificação e gráficos comparativos.
+- Seções 100% Absoluto (1º Turno e 2º Turno)
+- Seções >= 90% Absoluto (1º Turno e 2º Turno)
+- Resumos e Rankings por UF para ambos os turnos
+- Geocodificação de cidades hegemônicas com coordenadas do IBGE
+- Comparação estatística e migração oficial de votos 1T -> 2T
+Gera datasets consolidados em CSV e JSON prontos para auditoria e visualização pública.
 """
 
 from __future__ import annotations
@@ -45,20 +48,24 @@ os.makedirs(DIR_ZIPS, exist_ok=True)
 os.makedirs(DIR_PROCESSED, exist_ok=True)
 os.makedirs(DIR_RAW, exist_ok=True)
 
+
 def sanitize_csv_cell(val: Any) -> Any:
     """
     Previne Formula / DDE Injection (CWE-1236) em exportação de planilhas CSV.
+    Prefixa células que iniciam com caracteres perigosos com aspas simples.
     """
     if isinstance(val, str) and val:
         if val[0] in ("=", "+", "-", "@", "\t", "\r"):
             return f"'{val}"
     return val
 
+
 def normalizar_texto(texto: str) -> str:
     """
     Remove acentos e caracteres diacríticos para busca e cruzamento geográfico resiliente.
     """
     return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn").upper().strip()
+
 
 def baixar_dataset_nacional_2026() -> str:
     """
@@ -93,6 +100,7 @@ def baixar_dataset_nacional_2026() -> str:
             except OSError:
                 pass
         return ""
+
 
 def carregar_coordenadas_ibge() -> Dict[Tuple[str, str], Tuple[float, float]]:
     """
@@ -150,9 +158,11 @@ def carregar_coordenadas_ibge() -> Dict[Tuple[str, str], Tuple[float, float]]:
 
     return coordenadas
 
+
 def montar_url_tse(uf: str, mun: str, zona: str, secao: str, pleito: str = "6258") -> str:
     """
     Monta a URL canônica oficial do portal de resultados do TSE para a seção (Eleição 2026).
+    Pleito 6257 = 1º Turno | Pleito 6258 = 2º Turno
     """
     uf_clean = uf.lower().strip()
     mun_clean = str(mun).zfill(5)
@@ -163,89 +173,26 @@ def montar_url_tse(uf: str, mun: str, zona: str, secao: str, pleito: str = "6258
         f"{uf_clean}/mu/{mun_clean}/zn/{zona_clean}/cargo/1/vis/nominal/se/{secao_clean}/dados-de-urna/boletim-de-urna"
     )
 
-def main() -> None:
-    print("=" * 80)
-    print("INICIANDO PROCESSAMENTO OFICIAL NACIONAL - ELEIÇÕES 2026 (2º TURNO)")
-    print("Pleito 3221 / Eleição 6258: LULA (13) vs FLÁVIO BOLSONARO (22)")
-    print("=" * 80)
 
-    zip_path = baixar_dataset_nacional_2026()
-    if not zip_path:
-        print("[ERRO] Arquivo do TSE não encontrado e falha no download.", file=sys.stderr)
-        sys.exit(1)
-
-    print("\nCarregando catálogo de geocodificação dos municípios (IBGE)...")
-    coords_ibge = carregar_coordenadas_ibge()
-    print(f"Total de coordenadas carregadas: {len(coords_ibge):,}")
-
-    print("\nLendo e agregando todas as seções do 2º Turno 2026...")
-    secoes: Dict[Tuple[str, str, str, str], Dict[str, Any]] = defaultdict(lambda: {
-        "uf": "", "mun": "", "nome_mun": "", "zona": "", "secao": "",
-        "votos_lula": 0, "votos_bolsonaro": 0, "brancos": 0, "nulos": 0
-    })
-
-    with zipfile.ZipFile(zip_path) as z:
-        with z.open("votacao_secao_2026_BR.csv") as f_csv:
-            reader = csv.reader(io.TextIOWrapper(f_csv, encoding="latin1"), delimiter=";")
-            header = next(reader)
-
-            idx_turno = header.index("NR_TURNO")
-            idx_uf = header.index("SG_UF")
-            idx_mun = header.index("CD_MUNICIPIO")
-            idx_nm_mun = header.index("NM_MUNICIPIO")
-            idx_zona = header.index("NR_ZONA")
-            idx_secao = header.index("NR_SECAO")
-            idx_num = header.index("NR_VOTAVEL")
-            idx_votos = header.index("QT_VOTOS")
-
-            linhas_2t = 0
-            for row in reader:
-                if row[idx_turno] != "2":
-                    continue
-                linhas_2t += 1
-
-                uf = row[idx_uf].strip().upper()
-                mun = row[idx_mun].strip()
-                nm_mun = row[idx_nm_mun].strip()
-                zona = row[idx_zona].strip()
-                secao = row[idx_secao].strip()
-                num = row[idx_num].strip()
-
-                try:
-                    votos = int(row[idx_votos])
-                except (ValueError, TypeError):
-                    votos = 0
-
-                key = (uf, mun, zona, secao)
-                sec = secoes[key]
-                sec["uf"] = uf
-                sec["mun"] = mun
-                sec["nome_mun"] = nm_mun
-                sec["zona"] = zona
-                sec["secao"] = secao
-
-                if num == "13":
-                    sec["votos_lula"] += votos
-                elif num == "22":
-                    sec["votos_bolsonaro"] += votos
-                elif num == "95":
-                    sec["brancos"] += votos
-                elif num == "96":
-                    sec["nulos"] += votos
-
-    print(f"Total de registros de 2º Turno processados: {linhas_2t:,}")
-    print(f"Total de seções eleitorais apuradas no Brasil e Exterior: {len(secoes):,}")
-
-    # Classificação e Totalização
+def processar_turno(
+    secoes_dict: Dict[Tuple[str, str, str, str], Dict[str, Any]],
+    coords_ibge: Dict[Tuple[str, str], Tuple[float, float]],
+    pleito_tse: str,
+    sufixo_turno: str
+) -> Dict[str, Any]:
+    """
+    Processa e cataloga as seções de um determinado turno (1º ou 2º Turno 2026).
+    Calcula seções 100%, >= 90%, resumos por UF e geocodificação municipal.
+    """
     todas_100: List[Dict[str, Any]] = []
     todas_90: List[Dict[str, Any]] = []
 
     resumos_uf_map: Dict[str, Dict[str, Any]] = {
         uf: {
             "uf": uf, "total_secoes": 0, "votos_lula": 0, "votos_bolsonaro": 0,
-            "secoes_100_lula": 0, "secoes_100_bolsonaro": 0, "secoes_100_total": 0,
-            "secoes_90_lula": 0, "secoes_90_bolsonaro": 0, "secoes_90_total": 0,
-            "secoes_90_mais_100_lula": 0, "secoes_90_mais_100_bolsonaro": 0
+            "votos_outros": 0, "secoes_100_lula": 0, "secoes_100_bolsonaro": 0,
+            "secoes_100_total": 0, "secoes_90_lula": 0, "secoes_90_bolsonaro": 0,
+            "secoes_90_total": 0, "secoes_90_mais_100_lula": 0, "secoes_90_mais_100_bolsonaro": 0
         }
         for uf in UFS_BRASIL
     }
@@ -254,24 +201,26 @@ def main() -> None:
         "s100_l": 0, "s100_b": 0, "s90_l": 0, "s90_b": 0, "url": "", "nm_mun": "", "uf": "", "mun_code": ""
     })
 
-    for key, s in secoes.items():
+    for key, s in secoes_dict.items():
         uf = s["uf"]
         vl = s["votos_lula"]
         vb = s["votos_bolsonaro"]
-        v_nominais = vl + vb
+        vo = s.get("votos_outros", 0)
+        v_nominais = vl + vb + vo
         total_comparecimento = v_nominais + s["brancos"] + s["nulos"]
 
         if uf in resumos_uf_map:
             resumos_uf_map[uf]["total_secoes"] += 1
             resumos_uf_map[uf]["votos_lula"] += vl
             resumos_uf_map[uf]["votos_bolsonaro"] += vb
+            resumos_uf_map[uf]["votos_outros"] += vo
 
         if v_nominais <= 0:
             continue
 
         pct_lula = (vl / v_nominais) if v_nominais > 0 else 0.0
         pct_bols = (vb / v_nominais) if v_nominais > 0 else 0.0
-        url_tse = montar_url_tse(uf, s["mun"], s["zona"], s["secao"], "6258")
+        url_tse = montar_url_tse(uf, s["mun"], s["zona"], s["secao"], pleito_tse)
 
         info_secao = {
             "uf": uf,
@@ -284,6 +233,7 @@ def main() -> None:
             "votos_nominais": v_nominais,
             "votos_lula": vl,
             "votos_bolsonaro": vb,
+            "votos_outros": vo,
             "brancos": s["brancos"],
             "nulos": s["nulos"],
             "url_tse": url_tse
@@ -339,7 +289,7 @@ def main() -> None:
 
     resumos_uf = [resumos_uf_map[uf] for uf in UFS_BRASIL]
 
-    # Ordenar seções 100% por UF e votos decrescentes
+    # Ordenações
     todas_100.sort(key=lambda x: (x["candidato"], -x["votos_nominais"]))
     todas_90.sort(key=lambda x: (-x["percentual"], -x["votos_nominais"]))
 
@@ -382,13 +332,11 @@ def main() -> None:
                 "url": c["url"]
             })
 
-    print(f"Cidades com hegemonia catalogadas: {len(cidades_mapa):,} ({len(cidades_compact):,} georreferenciadas)")
-
-    # 1. Exportar Resumo por UF (CSV)
-    caminho_resumo = os.path.join(DIR_PROCESSED, "brasil_resumo_secoes_por_uf.csv")
+    # Exportações CSV do Turno
+    caminho_resumo = os.path.join(DIR_PROCESSED, f"brasil_resumo_secoes_por_uf_{sufixo_turno}.csv")
     with open(caminho_resumo, "w", newline="", encoding="utf-8") as f:
         colunas = [
-            "uf", "total_secoes", "votos_lula", "votos_bolsonaro",
+            "uf", "total_secoes", "votos_lula", "votos_bolsonaro", "votos_outros",
             "secoes_100_lula", "secoes_100_bolsonaro", "secoes_100_total",
             "secoes_90_lula", "secoes_90_bolsonaro", "secoes_90_total",
             "secoes_90_mais_100_lula", "secoes_90_mais_100_bolsonaro"
@@ -399,71 +347,97 @@ def main() -> None:
             sanitized = {k: sanitize_csv_cell(v) for k, v in r.items()}
             writer.writerow(sanitized)
 
-    # 2. Exportar Seções 100% (CSV)
-    caminho_100 = os.path.join(DIR_PROCESSED, "brasil_secoes_100pct.csv")
+    caminho_100 = os.path.join(DIR_PROCESSED, f"brasil_secoes_100pct_{sufixo_turno}.csv")
     with open(caminho_100, "w", newline="", encoding="utf-8") as f:
         if todas_100:
             writer = csv.DictWriter(f, fieldnames=list(todas_100[0].keys()))
             writer.writeheader()
             for s in todas_100:
-                sanitized_s = {k: sanitize_csv_cell(v) for k, v in s.items()}
-                writer.writerow(sanitized_s)
+                writer.writerow({k: sanitize_csv_cell(v) for k, v in s.items()})
 
-    # 3. Exportar Seções 90% (CSV)
-    caminho_90 = os.path.join(DIR_PROCESSED, "brasil_secoes_90pct.csv")
+    caminho_90 = os.path.join(DIR_PROCESSED, f"brasil_secoes_90pct_{sufixo_turno}.csv")
     with open(caminho_90, "w", newline="", encoding="utf-8") as f:
         if todas_90:
             writer = csv.DictWriter(f, fieldnames=list(todas_90[0].keys()))
             writer.writeheader()
             for s in todas_90:
-                sanitized_s = {k: sanitize_csv_cell(v) for k, v in s.items()}
-                writer.writerow(sanitized_s)
+                writer.writerow({k: sanitize_csv_cell(v) for k, v in s.items()})
 
-    # 4. Exportar CSVs específicos por estado requeridos nos marcos
-    for uf_alvo, arq_nome in [
-        ("MG", "secoes_100pct_minas_gerais.csv"),
-        ("BA", "secoes_100pct_bahia.csv"),
-        ("PA", "secoes_100pct_para.csv"),
-    ]:
-        secoes_uf = [s for s in todas_100 if s["uf"] == uf_alvo]
-        caminho_especifico = os.path.join(DIR_PROCESSED, arq_nome)
-        with open(caminho_especifico, "w", newline="", encoding="utf-8") as f:
-            if secoes_uf:
-                writer = csv.DictWriter(f, fieldnames=list(secoes_uf[0].keys()))
-                writer.writeheader()
-                for s in secoes_uf:
-                    writer.writerow({k: sanitize_csv_cell(v) for k, v in s.items()})
-            else:
-                writer = csv.writer(f)
-                writer.writerow(["uf", "municipio", "nome_municipio", "zona", "secao", "candidato", "percentual"])
-
-    # 5. Exportar JSON de Cidades e Geocodificação
-    with open(os.path.join(DIR_PROCESSED, "cidades_mapa_eleicoes.json"), "w", encoding="utf-8") as f:
+    # Arquivos JSON de Cidades do Turno
+    with open(os.path.join(DIR_PROCESSED, f"cidades_mapa_eleicoes_{sufixo_turno}.json"), "w", encoding="utf-8") as f:
         json.dump(cidades_mapa, f, ensure_ascii=False, indent=2)
 
-    with open(os.path.join(DIR_PROCESSED, "cidades_compact.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(DIR_PROCESSED, f"cidades_compact_{sufixo_turno}.json"), "w", encoding="utf-8") as f:
         json.dump(cidades_compact, f, separators=(",", ":"), ensure_ascii=False)
 
-    # 6. Exportar JSON Consolidado para o Dashboard
-    total_brasil_secoes = sum(r["total_secoes"] for r in resumos_uf)
-    total_brasil_lula = sum(r["votos_lula"] for r in resumos_uf)
-    total_brasil_bols = sum(r["votos_bolsonaro"] for r in resumos_uf)
+    # Se for 2T, manter retrocompatibilidade com nomes padrão sem sufixo
+    if sufixo_turno == "2t":
+        with open(os.path.join(DIR_PROCESSED, "brasil_resumo_secoes_por_uf.csv"), "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=colunas)
+            writer.writeheader()
+            for r in resumos_uf:
+                writer.writerow({k: sanitize_csv_cell(v) for k, v in r.items()})
+
+        with open(os.path.join(DIR_PROCESSED, "brasil_secoes_100pct.csv"), "w", newline="", encoding="utf-8") as f:
+            if todas_100:
+                writer = csv.DictWriter(f, fieldnames=list(todas_100[0].keys()))
+                writer.writeheader()
+                for s in todas_100:
+                    writer.writerow({k: sanitize_csv_cell(v) for k, v in s.items()})
+
+        with open(os.path.join(DIR_PROCESSED, "brasil_secoes_90pct.csv"), "w", newline="", encoding="utf-8") as f:
+            if todas_90:
+                writer = csv.DictWriter(f, fieldnames=list(todas_90[0].keys()))
+                writer.writeheader()
+                for s in todas_90:
+                    writer.writerow({k: sanitize_csv_cell(v) for k, v in s.items()})
+
+        with open(os.path.join(DIR_PROCESSED, "cidades_mapa_eleicoes.json"), "w", encoding="utf-8") as f:
+            json.dump(cidades_mapa, f, ensure_ascii=False, indent=2)
+
+        with open(os.path.join(DIR_PROCESSED, "cidades_compact.json"), "w", encoding="utf-8") as f:
+            json.dump(cidades_compact, f, separators=(",", ":"), ensure_ascii=False)
+
+        # CSVs por estado requeridos nos marcos (MG, BA, PA)
+        for uf_alvo, arq_nome in [
+            ("MG", "secoes_100pct_minas_gerais.csv"),
+            ("BA", "secoes_100pct_bahia.csv"),
+            ("PA", "secoes_100pct_para.csv"),
+        ]:
+            secoes_uf = [s for s in todas_100 if s["uf"] == uf_alvo]
+            caminho_especifico = os.path.join(DIR_PROCESSED, arq_nome)
+            with open(caminho_especifico, "w", newline="", encoding="utf-8") as f:
+                if secoes_uf:
+                    writer = csv.DictWriter(f, fieldnames=list(secoes_uf[0].keys()))
+                    writer.writeheader()
+                    for s in secoes_uf:
+                        writer.writerow({k: sanitize_csv_cell(v) for k, v in s.items()})
+                else:
+                    writer = csv.writer(f)
+                    writer.writerow(["uf", "municipio", "nome_municipio", "zona", "secao", "candidato", "percentual"])
+
+    total_secoes = sum(r["total_secoes"] for r in resumos_uf)
+    total_lula = sum(r["votos_lula"] for r in resumos_uf)
+    total_bols = sum(r["votos_bolsonaro"] for r in resumos_uf)
+    total_outros = sum(r["votos_outros"] for r in resumos_uf)
     total_s100_l = sum(r["secoes_100_lula"] for r in resumos_uf)
     total_s100_b = sum(r["secoes_100_bolsonaro"] for r in resumos_uf)
     total_s90_l = sum(r["secoes_90_lula"] for r in resumos_uf)
     total_s90_b = sum(r["secoes_90_bolsonaro"] for r in resumos_uf)
 
-    # Amostra de seções 90% para o dashboard: todas as de Flávio Bolsonaro + principais de Lula
+    # Amostra para UI
     secoes_90_bols_todas = [s for s in todas_90 if s["candidato"] == "FLÁVIO BOLSONARO"]
     secoes_90_lula_amostra = [s for s in todas_90 if s["candidato"] == "LULA"][:500]
-    amostra_90 = secoes_90_bols_todas + secoes_90_lula_amostra
 
-    dados_dashboard = {
+    return {
+        "turno": sufixo_turno.upper(),
+        "pleito_tse": pleito_tse,
         "resumos_uf": resumos_uf,
-        "totais_brasil": {
-            "total_secoes": total_brasil_secoes,
-            "votos_lula": total_brasil_lula,
-            "votos_bolsonaro": total_brasil_bols,
+        "totais": {
+            "total_secoes": total_secoes,
+            "votos_lula": total_lula,
+            "votos_bolsonaro": total_bols,
+            "votos_outros": total_outros,
             "secoes_100_lula": total_s100_l,
             "secoes_100_bolsonaro": total_s100_b,
             "secoes_100_total": total_s100_l + total_s100_b,
@@ -472,9 +446,143 @@ def main() -> None:
             "secoes_90_total": total_s90_l + total_s90_b,
             "secoes_90_mais_100_lula": total_s100_l + total_s90_l,
             "secoes_90_mais_100_bolsonaro": total_s100_b + total_s90_b,
+            "total_cidades_hegemonicas": len(cidades_compact)
         },
-        "secoes_100_amostra": todas_100,
-        "secoes_90_amostra": amostra_90
+        "secoes_100_todas": todas_100,
+        "secoes_90_amostra": secoes_90_bols_todas + secoes_90_lula_amostra,
+        "cidades_compact": cidades_compact
+    }
+
+
+def main() -> None:
+    print("=" * 80)
+    print("PIPELINE NACIONAL DE AUDITORIA: ELEIÇÕES 2026 (1º E 2º TURNO)")
+    print("TSE 2026 - 1º Turno (Eleição 6257) & 2º Turno (Eleição 6258)")
+    print("=" * 80)
+
+    zip_path = baixar_dataset_nacional_2026()
+    if not zip_path:
+        print("[ERRO CRÍTICO] Arquivo votacao_secao_2026_BR.zip não encontrado.", file=sys.stderr)
+        sys.exit(1)
+
+    print("\nCarregando coordenadas oficiais de municípios (IBGE)...")
+    coords_ibge = carregar_coordenadas_ibge()
+    print(f"Total de coordenadas carregadas: {len(coords_ibge):,}")
+
+    print("\nLendo dados consolidados de seções eleitorais do Brasil...")
+    secoes_1t: Dict[Tuple[str, str, str, str], Dict[str, Any]] = defaultdict(lambda: {
+        "uf": "", "mun": "", "nome_mun": "", "zona": "", "secao": "",
+        "votos_lula": 0, "votos_bolsonaro": 0, "votos_outros": 0, "brancos": 0, "nulos": 0
+    })
+    secoes_2t: Dict[Tuple[str, str, str, str], Dict[str, Any]] = defaultdict(lambda: {
+        "uf": "", "mun": "", "nome_mun": "", "zona": "", "secao": "",
+        "votos_lula": 0, "votos_bolsonaro": 0, "votos_outros": 0, "brancos": 0, "nulos": 0
+    })
+
+    with zipfile.ZipFile(zip_path) as z:
+        with z.open("votacao_secao_2026_BR.csv") as f_csv:
+            reader = csv.reader(io.TextIOWrapper(f_csv, encoding="latin1"), delimiter=";")
+            header = next(reader)
+
+            idx_turno = header.index("NR_TURNO")
+            idx_uf = header.index("SG_UF")
+            idx_mun = header.index("CD_MUNICIPIO")
+            idx_nm_mun = header.index("NM_MUNICIPIO")
+            idx_zona = header.index("NR_ZONA")
+            idx_secao = header.index("NR_SECAO")
+            idx_num = header.index("NR_VOTAVEL")
+            idx_votos = header.index("QT_VOTOS")
+
+            linhas_totais = 0
+            for row in reader:
+                linhas_totais += 1
+                turno = row[idx_turno].strip()
+                if turno not in ("1", "2"):
+                    continue
+
+                uf = row[idx_uf].strip().upper()
+                mun = row[idx_mun].strip()
+                nm_mun = row[idx_nm_mun].strip()
+                zona = row[idx_zona].strip()
+                secao = row[idx_secao].strip()
+                num = row[idx_num].strip()
+
+                try:
+                    votos = int(row[idx_votos])
+                except (ValueError, TypeError):
+                    votos = 0
+
+                key = (uf, mun, zona, secao)
+                sec = secoes_1t[key] if turno == "1" else secoes_2t[key]
+                sec["uf"] = uf
+                sec["mun"] = mun
+                sec["nome_mun"] = nm_mun
+                sec["zona"] = zona
+                sec["secao"] = secao
+
+                if num == "13":
+                    sec["votos_lula"] += votos
+                elif num == "22":
+                    sec["votos_bolsonaro"] += votos
+                elif num == "95":
+                    sec["brancos"] += votos
+                elif num == "96":
+                    sec["nulos"] += votos
+                else:
+                    sec["votos_outros"] += votos
+
+    print(f"Total de registros analisados no arquivo nacional: {linhas_totais:,}")
+    print(f"Total de seções apuradas no 1º Turno: {len(secoes_1t):,}")
+    print(f"Total de seções apuradas no 2º Turno: {len(secoes_2t):,}")
+
+    print("\n--- PROCESSANDO 1º TURNO 2026 (Eleição 6257) ---")
+    resultado_1t = processar_turno(secoes_1t, coords_ibge, "6257", "1t")
+    print(f"1º Turno: {resultado_1t['totais']['secoes_100_total']} seções 100% "
+          f"({resultado_1t['totais']['secoes_100_lula']} Lula | {resultado_1t['totais']['secoes_100_bolsonaro']} Flávio Bolsonaro)")
+    print(f"1º Turno: {resultado_1t['totais']['secoes_90_total']} seções ≥ 90% "
+          f"({resultado_1t['totais']['secoes_90_lula']} Lula | {resultado_1t['totais']['secoes_90_bolsonaro']} Flávio Bolsonaro)")
+
+    print("\n--- PROCESSANDO 2º TURNO 2026 (Eleição 6258) ---")
+    resultado_2t = processar_turno(secoes_2t, coords_ibge, "6258", "2t")
+    print(f"2º Turno: {resultado_2t['totais']['secoes_100_total']} seções 100% "
+          f"({resultado_2t['totais']['secoes_100_lula']} Lula | {resultado_2t['totais']['secoes_100_bolsonaro']} Flávio Bolsonaro)")
+    print(f"2º Turno: {resultado_2t['totais']['secoes_90_total']} seções ≥ 90% "
+          f"({resultado_2t['totais']['secoes_90_lula']} Lula | {resultado_2t['totais']['secoes_90_bolsonaro']} Flávio Bolsonaro)")
+
+    # Carregar dados de migração se existirem
+    caminho_migracao = os.path.join(DIR_PROCESSED, "decomposicao_votos_brasil.json")
+    dados_migracao = {}
+    if os.path.exists(caminho_migracao):
+        with open(caminho_migracao, encoding="utf-8") as f:
+            dados_migracao = json.load(f)
+
+    # JSON Consolidado para Frontend
+    dados_dashboard = {
+        "turno_ativo_padrao": "2T",
+        "turnos": {
+            "1T": {
+                "pleito_tse": "6257",
+                "descricao": "1º Turno das Eleições Presidenciais 2026",
+                "totais": resultado_1t["totais"],
+                "resumos_uf": resultado_1t["resumos_uf"],
+                "secoes_100_amostra": resultado_1t["secoes_100_todas"],
+                "secoes_90_amostra": resultado_1t["secoes_90_amostra"]
+            },
+            "2T": {
+                "pleito_tse": "6258",
+                "descricao": "2º Turno das Eleições Presidenciais 2026 (Decisivo)",
+                "totais": resultado_2t["totais"],
+                "resumos_uf": resultado_2t["resumos_uf"],
+                "secoes_100_amostra": resultado_2t["secoes_100_todas"],
+                "secoes_90_amostra": resultado_2t["secoes_90_amostra"]
+            }
+        },
+        # Campos de retrocompatibilidade
+        "totais_brasil": resultado_2t["totais"],
+        "resumos_uf": resultado_2t["resumos_uf"],
+        "secoes_100_amostra": resultado_2t["secoes_100_todas"],
+        "secoes_90_amostra": resultado_2t["secoes_90_amostra"],
+        "migracao": dados_migracao
     }
 
     caminho_json = os.path.join(DIR_PROCESSED, "dados_mapa_calor.json")
@@ -482,18 +590,10 @@ def main() -> None:
         json.dump(dados_dashboard, f_json, ensure_ascii=False, indent=2)
 
     print("\n" + "=" * 80)
-    print("PROCESSAMENTO OFICIAL 2026 CONCLUÍDO COM SUCESSO!")
-    print(f"Total de Seções no Brasil       : {total_brasil_secoes:,}")
-    print(f"Total Votos Lula (13)           : {total_brasil_lula:,} (51,79%)")
-    print(f"Total Votos Flávio Bolsonaro (22): {total_brasil_bols:,} (48,21%)")
-    print("-" * 80)
-    print(f"Seções 100% LULA                : {total_s100_l:,} (96,36%)")
-    print(f"Seções 100% FLÁVIO BOLSONARO    : {total_s100_b:,} (3,64%)")
-    print(f"Seções ≥ 90% LULA               : {total_s90_l:,}")
-    print(f"Seções ≥ 90% FLÁVIO BOLSONARO   : {total_s90_b:,}")
-    print(f"Total Hegemônicas LULA          : {total_s100_l + total_s90_l:,}")
-    print(f"Total Hegemônicas FLÁVIO BOLSONARO: {total_s100_b + total_s90_b:,}")
+    print("CONSOLIDAÇÃO NACIONAL 2026 CONCLUÍDA COM SUCESSO!")
+    print(f"Arquivos CSV e JSON gerados em: {DIR_PROCESSED}")
     print("=" * 80)
+
 
 if __name__ == "__main__":
     main()

@@ -26,14 +26,24 @@ def encontrar_arquivo(nome):
     return nome
 
 caminho_dados = encontrar_arquivo("dados_mapa_calor.json")
-caminho_cidades = encontrar_arquivo("cidades_compact.json")
+caminho_cidades_1t = encontrar_arquivo("cidades_compact_1t.json")
+caminho_cidades_2t = encontrar_arquivo("cidades_compact_2t.json")
+if not os.path.exists(caminho_cidades_2t):
+    caminho_cidades_2t = encontrar_arquivo("cidades_compact.json")
 caminho_migracao = encontrar_arquivo("decomposicao_votos_brasil.json")
 
 with open(caminho_dados, encoding="utf-8") as f:
     dados_app = json.load(f)
 
-with open(caminho_cidades, encoding="utf-8") as f:
-    cidades_compact_str = f.read()
+cidades_compact_1t_str = "[]"
+if os.path.exists(caminho_cidades_1t):
+    with open(caminho_cidades_1t, encoding="utf-8") as f:
+        cidades_compact_1t_str = f.read().strip() or "[]"
+
+cidades_compact_2t_str = "[]"
+if os.path.exists(caminho_cidades_2t):
+    with open(caminho_cidades_2t, encoding="utf-8") as f:
+        cidades_compact_2t_str = f.read().strip() or "[]"
 
 with open(caminho_migracao, encoding="utf-8") as f:
     decomposicao_app = json.load(f)
@@ -818,16 +828,30 @@ html_template = f'''<!DOCTYPE html>
   <div class="container">
     <header>
       <div class="header-top">
-        <div class="badge-live">Auditoria Eleitoral TSE 2026 • 2º Turno Oficial</div>
+        <div class="badge-live" id="badge-turno">Auditoria Eleitoral TSE 2026 • 2º Turno Oficial</div>
         <button class="theme-toggle" onclick="alternarTema()">
           <span id="theme-icon">🌙</span> <span id="theme-text">Modo Escuro</span>
         </button>
       </div>
       <h1>Mapa de Calor: Seções Absolutas no Brasil (2026)</h1>
-      <p class="subtitle">
+      <p class="subtitle" id="subtitulo-pagina">
         Análise nacional oficial de todas as 499.205 seções eleitorais nas 28 UFs (26 estados + DF + Exterior ZZ) no 2º Turno da Eleição Presidencial de 2026, identificando as cidades onde Lula (13) e Flávio Bolsonaro (22) registraram hegemonia absoluta (100% dos votos nominais) e quase absoluta (≥ 90% dos votos).
       </p>
     </header>
+
+    <!-- Seletor de Turno Eleitoral 2026 -->
+    <div class="controls-bar" style="margin-bottom: 16px; border-left: 4px solid var(--neutral-color);">
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <span style="font-weight: 800; font-size: 0.95rem; color: var(--text-main);">Turno Eleitoral (2026):</span>
+        <div class="button-group">
+          <button class="btn-toggle active" id="btn-turno-2t" onclick="alterarTurno('2T')">2º Turno Oficial (Decisivo)</button>
+          <button class="btn-toggle" id="btn-turno-1t" onclick="alterarTurno('1T')">1º Turno Oficial</button>
+        </div>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;" id="turno-desc-badge">
+        Pleito Oficial TSE 6258 • Apuração Nacional Completa (499.205 seções)
+      </div>
+    </div>
 
     <!-- KPIs Totais -->
     <div class="kpi-grid">
@@ -1074,14 +1098,55 @@ html_template = f'''<!DOCTYPE html>
   <script>
     // DADOS EMBARCADOS PARA FUNCIONAMENTO 100% OFFLINE / LOCAL
     const DADOS_APP = {dados_app_json_str};
-    const CIDADES_MAPA = {cidades_compact_str};
+    const CIDADES_MAPA_1T = {cidades_compact_1t_str};
+    const CIDADES_MAPA_2T = {cidades_compact_2t_str};
     const DADOS_MIGRACAO = {decomposicao_json_str};
 
+    let turnoAtual = '2T';
     let metricaAtual = '100'; // '100' ou '90'
     let candAtual = 'ambos';  // 'ambos', 'lula', 'bolsonaro'
     let ufSelecionada = null;
     let mapaLeaflet = null;
     let camadaMarcadores = null;
+
+    function getTurnoData() {{
+      if (DADOS_APP.turnos && DADOS_APP.turnos[turnoAtual]) {{
+        return DADOS_APP.turnos[turnoAtual];
+      }}
+      return {{
+        totais: DADOS_APP.totais_brasil,
+        resumos_uf: DADOS_APP.resumos_uf,
+        secoes_100_amostra: DADOS_APP.secoes_100_amostra,
+        secoes_90_amostra: DADOS_APP.secoes_90_amostra
+      }};
+    }}
+
+    function getCidadesData() {{
+      return (turnoAtual === '1T') ? CIDADES_MAPA_1T : CIDADES_MAPA_2T;
+    }}
+
+    function alterarTurno(t) {{
+      turnoAtual = t;
+      document.getElementById('btn-turno-1t').classList.toggle('active', t === '1T');
+      document.getElementById('btn-turno-2t').classList.toggle('active', t === '2T');
+
+      const badge = document.getElementById('badge-turno');
+      const subtitulo = document.getElementById('subtitulo-pagina');
+      const badgeDesc = document.getElementById('turno-desc-badge');
+
+      if (t === '1T') {{
+        if (badge) badge.innerText = 'Auditoria Eleitoral TSE 2026 • 1º Turno Oficial';
+        if (badgeDesc) badgeDesc.innerText = 'Pleito Oficial TSE 6257 • Apuração Nacional Completa (499.206 seções)';
+        if (subtitulo) subtitulo.innerText = 'Análise nacional oficial de todas as 499.206 seções eleitorais nas 28 UFs (26 estados + DF + Exterior ZZ) no 1º Turno da Eleição Presidencial de 2026, identificando as cidades onde Lula (13) e Flávio Bolsonaro (22) registraram hegemonia absoluta (100% dos votos nominais) e quase absoluta (≥ 90% dos votos).';
+      }} else {{
+        if (badge) badge.innerText = 'Auditoria Eleitoral TSE 2026 • 2º Turno Oficial';
+        if (badgeDesc) badgeDesc.innerText = 'Pleito Oficial TSE 6258 • Apuração Nacional Completa (499.205 seções)';
+        if (subtitulo) subtitulo.innerText = 'Análise nacional oficial de todas as 499.205 seções eleitorais nas 28 UFs (26 estados + DF + Exterior ZZ) no 2º Turno da Eleição Presidencial de 2026, identificando as cidades onde Lula (13) e Flávio Bolsonaro (22) registraram hegemonia absoluta (100% dos votos nominais) e quase absoluta (≥ 90% dos votos).';
+      }}
+
+      atualizarInterface();
+      atualizarMapaCidades();
+    }}
 
     function escapeHtml(text) {{
       if (text === null || text === undefined) return '';
@@ -1145,20 +1210,22 @@ html_template = f'''<!DOCTYPE html>
     }}
 
     function atualizarInterface() {{
-      const totais = DADOS_APP.totais_brasil;
+      const tData = getTurnoData();
+      const totais = tData.totais;
       document.getElementById('kpi-total-secoes').innerText = totais.total_secoes.toLocaleString('pt-BR');
       document.getElementById('kpi-100-lula').innerText = totais.secoes_100_lula.toLocaleString('pt-BR');
       document.getElementById('kpi-100-bols').innerText = totais.secoes_100_bolsonaro.toLocaleString('pt-BR');
       document.getElementById('kpi-90-lula').innerText = totais.secoes_90_mais_100_lula.toLocaleString('pt-BR');
       document.getElementById('kpi-90-bols').innerText = totais.secoes_90_mais_100_bolsonaro.toLocaleString('pt-BR');
 
+      const rotuloTurno = (turnoAtual === '1T') ? '1º Turno' : '2º Turno';
       document.getElementById('titulo-mapa-calor').innerText = metricaAtual === '100'
-        ? "Mapa de Calor por UF (Seções 100% Absolutas)"
-        : "Mapa de Calor por UF (Seções ≥ 90% Hegemônicas)";
+        ? `Mapa de Calor por UF (${{rotuloTurno}} - Seções 100% Absolutas)`
+        : `Mapa de Calor por UF (${{rotuloTurno}} - Seções ≥ 90% Hegemônicas)`;
 
       document.getElementById('titulo-mapa-cidades').innerText = metricaAtual === '100'
-        ? "Mapa do Brasil com as Cidades com Seções 100% Absolutas"
-        : "Mapa do Brasil com as Cidades com Seções ≥ 90% Hegemônicas";
+        ? `Mapa do Brasil com as Cidades com Seções 100% Absolutas (${{rotuloTurno}})`
+        : `Mapa do Brasil com as Cidades com Seções ≥ 90% Hegemônicas (${{rotuloTurno}})`;
 
       renderizarGridUFs();
       renderizarRankings();
@@ -1169,7 +1236,8 @@ html_template = f'''<!DOCTYPE html>
       const container = document.getElementById('uf-grid-container');
       container.innerHTML = '';
 
-      DADOS_APP.resumos_uf.forEach(r => {{
+      const resumos = getTurnoData().resumos_uf;
+      resumos.forEach(r => {{
         let lulaVal = metricaAtual === '100' ? r.secoes_100_lula : r.secoes_90_mais_100_lula;
         let bolsVal = metricaAtual === '100' ? r.secoes_100_bolsonaro : r.secoes_90_mais_100_bolsonaro;
         let totalVal = lulaVal + bolsVal;
@@ -1188,7 +1256,6 @@ html_template = f'''<!DOCTYPE html>
           renderizarGridUFs();
           renderizarTabela();
           if (ufSelecionada) {{
-            // filtrar cidades no mapa
             atualizarMapaCidades();
           }}
         }};
@@ -1263,7 +1330,8 @@ html_template = f'''<!DOCTYPE html>
       if (!camadaMarcadores) return;
       camadaMarcadores.clearLayers();
 
-      let cidadesFiltradas = CIDADES_MAPA.filter(c => {{
+      const dadosCidades = getCidadesData();
+      let cidadesFiltradas = dadosCidades.filter(c => {{
         if (c.lt === 0 && c.lg === 0) return false;
         if (ufSelecionada && c.uf !== ufSelecionada) return false;
 
@@ -1318,7 +1386,8 @@ html_template = f'''<!DOCTYPE html>
       contLula.innerHTML = '';
       contBols.innerHTML = '';
 
-      let lista = [...DADOS_APP.resumos_uf].map(r => {{
+      const resumos = getTurnoData().resumos_uf;
+      let lista = [...resumos].map(r => {{
         let lulaVal = metricaAtual === '100' ? r.secoes_100_lula : r.secoes_90_mais_100_lula;
         let bolsVal = metricaAtual === '100' ? r.secoes_100_bolsonaro : r.secoes_90_mais_100_bolsonaro;
         return {{ ...r, lulaVal, bolsVal }};
@@ -1377,7 +1446,8 @@ html_template = f'''<!DOCTYPE html>
       const tbody = document.getElementById('tabela-secoes-body');
       tbody.innerHTML = '';
 
-      let listaSeções = (metricaAtual === '100') ? DADOS_APP.secoes_100_amostra : DADOS_APP.secoes_90_amostra;
+      const tData = getTurnoData();
+      let listaSeções = (metricaAtual === '100') ? tData.secoes_100_amostra : tData.secoes_90_amostra;
       const filtroTexto = document.getElementById('filtro-busca').value.toLowerCase();
 
       let filtradas = listaSeções.filter(s => {{

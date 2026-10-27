@@ -1,5 +1,5 @@
-uf,municipio,nome_municipio,zona,secao,aptos,comparecimento,votos_nominais,votos_lula,votos_bolsonaro,brancos,nulos,url_tse,candidato,percentual
-BA,33596,BARRA DO MENDES,176,151,71,71,69,69,0,0,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/33596/zn/0176/cargo/1/vis/nominal/se/0151/dados-de-urna/boletim-de-urna,LULA,100.0
-BA,39039,SENTO SÉ,96,119,68,68,62,62,0,0,6,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/39039/zn/0096/cargo/1/vis/nominal/se/0119/dados-de-urna/boletim-de-urna,LULA,100.0
-BA,33090,ÉRICO CARDOSO,111,250,44,44,44,44,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/33090/zn/0111/cargo/1/vis/nominal/se/0250/dados-de-urna/boletim-de-urna,LULA,100.0
-BA,35378,IAÇU,193,116,44,44,40,40,0,2,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/35378/zn/0193/cargo/1/vis/nominal/se/0116/dados-de-urna/boletim-de-urna,LULA,100.0
+uf,municipio,nome_municipio,zona,secao,aptos,comparecimento,votos_nominais,votos_lula,votos_bolsonaro,votos_outros,brancos,nulos,url_tse,candidato,percentual
+BA,33596,BARRA DO MENDES,176,151,71,71,69,69,0,0,0,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/33596/zn/0176/cargo/1/vis/nominal/se/0151/dados-de-urna/boletim-de-urna,LULA,100.0
+BA,39039,SENTO SÉ,96,119,68,68,62,62,0,0,0,6,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/39039/zn/0096/cargo/1/vis/nominal/se/0119/dados-de-urna/boletim-de-urna,LULA,100.0
+BA,33090,ÉRICO CARDOSO,111,250,44,44,44,44,0,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/33090/zn/0111/cargo/1/vis/nominal/se/0250/dados-de-urna/boletim-de-urna,LULA,100.0
+BA,35378,IAÇU,193,116,44,44,40,40,0,0,2,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/ba/mu/35378/zn/0193/cargo/1/vis/nominal/se/0116/dados-de-urna/boletim-de-urna,LULA,100.0

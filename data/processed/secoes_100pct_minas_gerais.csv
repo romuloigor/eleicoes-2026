@@ -1,3 +1,3 @@
-uf,municipio,nome_municipio,zona,secao,aptos,comparecimento,votos_nominais,votos_lula,votos_bolsonaro,brancos,nulos,url_tse,candidato,percentual
-MG,41009,LUISLÂNDIA,50,224,71,71,69,69,0,0,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/mg/mu/41009/zn/0050/cargo/1/vis/nominal/se/0224/dados-de-urna/boletim-de-urna,LULA,100.0
-MG,51390,SALINAS,244,256,49,49,47,47,0,1,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/mg/mu/51390/zn/0244/cargo/1/vis/nominal/se/0256/dados-de-urna/boletim-de-urna,LULA,100.0
+uf,municipio,nome_municipio,zona,secao,aptos,comparecimento,votos_nominais,votos_lula,votos_bolsonaro,votos_outros,brancos,nulos,url_tse,candidato,percentual
+MG,41009,LUISLÂNDIA,50,224,71,71,69,69,0,0,0,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/mg/mu/41009/zn/0050/cargo/1/vis/nominal/se/0224/dados-de-urna/boletim-de-urna,LULA,100.0
+MG,51390,SALINAS,244,256,49,49,47,47,0,0,1,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/mg/mu/51390/zn/0244/cargo/1/vis/nominal/se/0256/dados-de-urna/boletim-de-urna,LULA,100.0

@@ -135,83 +135,100 @@ A velocidade do eleitor na cabine é calculada pelo intervalo de tempo entre doi
 
 ---
 
-## 🇧🇷 Item 4: Seções 100% Absolutas no Brasil (2º Turno 2026)
+## 🇧🇷 Item 4: Seções 100% Absolutas no Brasil (1º e 2º Turno 2026)
 
-Ao processar todas as **499.205 seções eleitorais** do 2º turno da eleição presidencial de 2026 (Pleito 3221 / Eleição 6258), identificamos um total de **110 seções eleitorais** com 100% dos votos nominais destinados a um único candidato.
+O pipeline nacional auditou todas as seções eleitorais oficiais de 2026 em ambos os turnos presidenciais:
+* **1º Turno (Pleito 3220 / Eleição 6257):** **499.206 seções eleitorais** apuradas.
+* **2º Turno (Pleito 3221 / Eleição 6258):** **499.205 seções eleitorais** apuradas.
 
 ```
-Total de Seções Auditadas no Brasil: 499.205
-Seções com 100% de Votos Nominais:   110 (0,022% do total nacional)
-├── Lula (PT):                       106 seções (96,36%)
-└── Flávio Bolsonaro (PL):             4 seções (3,64%)
+┌────────────────────────────────────────────────────────────────────────┐
+│ COMPARAÇÃO NACIONAL: SEÇÕES 100% ABSOLUTAS (TSE 2026)                  │
+├───────────────────────────────┬───────────────────┬────────────────────┤
+│ Candidato                     │ 1º Turno (6257)   │ 2º Turno (6258)    │
+├───────────────────────────────┼───────────────────┼────────────────────┤
+│ Lula (PT - 13)                │ 38 seções (95,0%) │ 106 seções (96,4%) │
+│ Flávio Bolsonaro (PL - 22)    │  2 seções ( 5,0%) │   4 seções ( 3,6%) │
+│ Terceiros Candidatos          │  0 seções ( 0,0%) │        -           │
+├───────────────────────────────┼───────────────────┼────────────────────┤
+│ TOTAL DE SEÇÕES 100%          │ 40 seções         │ 110 seções         │
+└───────────────────────────────┴───────────────────┴────────────────────┘
 ```
 
-### Distribuição Estadual das 110 Seções 100% (2026):
+### 4.1 As Seções 100% de Flávio Bolsonaro no 1º e 2º Turno de 2026
 
-| Unidade Federativa | Seções 100% Lula | Seções 100% Flávio Bolsonaro | Total 100% na UF |
-| :--- | :---: | :---: | :---: |
-| **Amazonas (AM)** | **30** | 0 | 30 |
-| **Maranhão (MA)** | **20** | 0 | 20 |
-| **Pará (PA)** | **16** | **2** | 18 |
-| **Roraima (RR)** | **8** | 0 | 8 |
-| **Tocantins (TO)** | **7** | 0 | 7 |
-| **Mato Grosso (MT)** | **5** | 0 | 5 |
-| **Bahia (BA)** | **4** | 0 | 4 |
-| **Rio Grande do Sul (RS)** | **2** | **2** | 4 |
-| **Acre (AC)** | **3** | 0 | 3 |
-| **Ceará (CE)** | **2** | 0 | 2 |
-| **Minas Gerais (MG)** | **2** | 0 | 2 |
-| **Espírito Santo (ES)** | **1** | 0 | 1 |
-| **Paraná (PR)** | **1** | 0 | 1 |
-| **Paraíba (PB)** | **1** | 0 | 1 |
-| **Rondônia (RO)** | **1** | 0 | 1 |
-| **Pernambuco (PE)** | **1** | 0 | 1 |
-| **Mato Grosso do Sul (MS)** | **1** | 0 | 1 |
-| **Piauí (PI)** | **1** | 0 | 1 |
-| **Demais 10 UFs** | 0 | 0 | 0 |
-| **TOTAL BRASIL** | **106** | **4** | **110** |
+A auditoria matemática identificou uma consistência geográfica notável: as duas seções 100% de Flávio Bolsonaro no 1º Turno mantiveram o voto unânime no 2º Turno, acrescidas de mais duas seções:
 
-### Onde estão as 4 Seções 100% de Flávio Bolsonaro em 2026?
-1. **Rio Grande do Sul (RS) - Município de Arroio do Padre (Cód: 89028):**
-   - Zona 34, Seção 433: **116 votos nominais (100% Flávio Bolsonaro)**. Município de forte tradição pomerana no sul gaúcho.
-   - [Ver Boletim de Urna Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/rs/mu/89028/zn/0034/cargo/1/vis/nominal/se/0433/dados-de-urna/boletim-de-urna)
-2. **Rio Grande do Sul (RS) - Município de Cândido Godói (Cód: 85839):**
-   - Zona 166, Seção 81: **82 votos nominais (100% Flávio Bolsonaro)**. Comunidade rural no Noroeste Gaúcho.
-   - [Ver Boletim de Urna Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/rs/mu/85839/zn/0166/cargo/1/vis/nominal/se/0081/dados-de-urna/boletim-de-urna)
-3. **Pará (PA) - Município de Jacareacanga (Cód: 04200):**
-   - Zona 102, Seção 44: **50 votos nominais (100% Flávio Bolsonaro)**. Localidade no sudoeste paraense.
-   - [Ver Boletim de Urna Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04200/zn/0102/cargo/1/vis/nominal/se/0044/dados-de-urna/boletim-de-urna)
-4. **Pará (PA) - Município de Chaves (Cód: 04499):**
-   - Zona 17, Seção 41: **48 votos nominais (100% Flávio Bolsonaro)**. Seção ribeirinha no Arquipélago do Marajó.
-   - [Ver Boletim de Urna Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04499/zn/0017/cargo/1/vis/nominal/se/0041/dados-de-urna/boletim-de-urna)
+| UF | Município | Cód. TSE | Zona | Seção | 1º Turno (6257) | 2º Turno (6258) | Link Boletim Oficial TSE (2ºT) |
+|---|---|---|---|---|---|---|---|
+| **RS** | CÂNDIDO GODÓI | `85839` | 166 | 81 | **81 votos (100%)** | **82 votos (100%)** | [Ver BU Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/rs/mu/85839/zn/0166/cargo/1/vis/nominal/se/0081/dados-de-urna/boletim-de-urna) |
+| **PA** | JACAREACANGA | `04200` | 102 | 44 | **49 votos (100%)** | **50 votos (100%)** | [Ver BU Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04200/zn/0102/cargo/1/vis/nominal/se/0044/dados-de-urna/boletim-de-urna) |
+| **RS** | ARROIO DO PADRE | `89028` | 34 | 433 | 98 votos (84,5%) | **116 votos (100%)** | [Ver BU Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/rs/mu/89028/zn/0034/cargo/1/vis/nominal/se/0433/dados-de-urna/boletim-de-urna) |
+| **PA** | CHAVES | `04499` | 17 | 41 | 38 votos (82,6%) | **48 votos (100%)** | [Ver BU Oficial no TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04449/zn/0017/cargo/1/vis/nominal/se/0041/dados-de-urna/boletim-de-urna) |
 
-### 📌 Nota de Auditoria e Retificação Oficial: Caracas (ZZ - Exterior)
-Durante a auditoria independente, foi verificado o histórico de seções consulares no exterior. No pleito de **2026 (2º Turno - Eleição 6258)**, os dados oficiais do TSE registram que **Caracas (Venezuela - Município 29505) não teve seção 100%**:
-- **Total do Município de Caracas:** Flávio Bolsonaro obteve **136 votos (56,20%)** e Lula obteve **106 votos (43,80%)**.
-- **Seção 78 (Caracas):** Flávio Bolsonaro: **61 votos (57,01%)** | Lula: **46 votos (42,99%)** | Brancos: 2 votos.
+* Cândido Godói (RS) e Jacareacanga (PA) registraram **100% de unanimidade pró-Flávio Bolsonaro em ambos os turnos de 2026**.
+* Arroio do Padre (RS) e Chaves (PA) atingiram a marca de 100% no 2º Turno através da conversão de eleitores locais de outros candidatos.
+
+### 4.2 Distribuição Estadual das Seções 100% de Lula e Flávio Bolsonaro (2026):
+
+| Unidade Federativa | 1º Turno (Lula) | 1º Turno (Flávio) | 2º Turno (Lula) | 2º Turno (Flávio) | Total 2ºT |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Amazonas (AM)** | 12 | 0 | **30** | 0 | 30 |
+| **Maranhão (MA)** | 8 | 0 | **20** | 0 | 20 |
+| **Pará (PA)** | 10 | 1 | **16** | **2** | 18 |
+| **Roraima (RR)** | 2 | 0 | **8** | 0 | 8 |
+| **Tocantins (TO)** | 2 | 0 | **7** | 0 | 7 |
+| **Mato Grosso (MT)** | 1 | 0 | **5** | 0 | 5 |
+| **Bahia (BA)** | 1 | 0 | **4** | 0 | 4 |
+| **Rio Grande do Sul (RS)** | 0 | 1 | **2** | **2** | 4 |
+| **Acre (AC)** | 0 | 0 | **3** | 0 | 3 |
+| **Ceará (CE)** | 0 | 0 | **2** | 0 | 2 |
+| **Minas Gerais (MG)** | 0 | 0 | **2** | 0 | 2 |
+| **Espírito Santo (ES)** | 0 | 0 | **1** | 0 | 1 |
+| **Paraná (PR)** | 0 | 0 | **1** | 0 | 1 |
+| **Paraíba (PB)** | 0 | 0 | **1** | 0 | 1 |
+| **Rondônia (RO)** | 1 | 0 | **1** | 0 | 1 |
+| **Pernambuco (PE)** | 1 | 0 | **1** | 0 | 1 |
+| **Mato Grosso do Sul (MS)** | 0 | 0 | **1** | 0 | 1 |
+| **Piauí (PI)** | 0 | 0 | **1** | 0 | 1 |
+| **Demais 10 UFs** | 0 | 0 | 0 | 0 | 0 |
+| **TOTAL BRASIL** | **38** | **2** | **106** | **4** | **110** |
+
+### 4.3 📌 Auditoria Oficial de Caracas (ZZ - Exterior) em 2026
+Na auditoria oficial das seções eleitorais no exterior em 2026 (Eleição 6257 no 1ºT e Eleição 6258 no 2ºT), **Caracas (Venezuela - Município 29505) não registrou nenhuma seção hegemônica (nem 100% nem $\ge 90\%$)**:
+* **Total do Município de Caracas (2º Turno 2026):** Flávio Bolsonaro obteve **136 votos (56,20%)** e Lula obteve **106 votos (43,80%)**.
+* **Seção 78 (Caracas):** Flávio Bolsonaro: **61 votos (57,01%)** | Lula: **46 votos (42,99%)** | Brancos: 2 votos.
   - [Ver Seção 78 de Caracas no Portal TSE ↗](https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/zz/mu/29505/zn/0001/cargo/1/vis/nominal/se/0078/dados-de-urna/boletim-de-urna)
-- **Seção 79 (Caracas):** Flávio Bolsonaro: **42 votos (48,28%)** | Lula: **45 votos (51,72%)** | Brancos: 1 voto.
-- **Seção 561 (Caracas):** Flávio Bolsonaro: **33 votos (68,75%)** | Lula: **15 votos (31,25%)** | Nulos: 1 voto.
+* **Seção 79 (Caracas):** Lula: **45 votos (51,72%)** | Flávio Bolsonaro: **42 votos (48,28%)** | Brancos: 1 voto.
+* **Seção 561 (Caracas):** Flávio Bolsonaro: **33 votos (68,75%)** | Lula: **15 votos (31,25%)** | Nulos: 1 voto.
 
-A ocorrência de 100% em Caracas pertencia ao arquivo histórico do ciclo de 2022 (`bweb_2t_ZZ_311020221535.zip`), tendo sido plenamente esclarecida e retificada nos dados e tabelas oficiais deste repositório para o foco integral em 2026.
+Portanto, em conformidade com as regras de corte estatístico deste repositório, Caracas não figura nas listagens de seções hegemônicas.
 
 ---
 
-## 🗺️ Item 5: Seções Hegemônicas $\ge 90\%$ e Mapa Geográfico Nacional (2026)
+## 🗺️ Item 5: Seções Hegemônicas $\ge 90\%$ e Mapa Geográfico Nacional (1º e 2º Turno 2026)
 
 Para além do 100% absoluto, foi auditado o segundo critério solicitado: **seções com dominância hegemônica igual ou superior a 90% dos votos nominais** ($\ge 90\%$).
 
 ```
-Total de Seções Hegemônicas no 2º Turno 2026 (≥ 90%): 7.173 seções (1,44% do total nacional)
-├── Lula (PT):                                     6.793 seções (94,70%)
-└── Flávio Bolsonaro (PL):                           380 seções (5,30%)
-
-Total Geral Hegemônicas (≥ 90% + 100% Absolutas):   7.283 seções
-├── Lula (PT):                                     6.899 seções (94,73%)
-└── Flávio Bolsonaro (PL):                           384 seções (5,27%)
+┌────────────────────────────────────────────────────────────────────────┐
+│ COMPARAÇÃO NACIONAL: SEÇÕES ≥ 90% E HEGEMÔNICAS (TSE 2026)             │
+├───────────────────────────────┬───────────────────┬────────────────────┤
+│ Métrica                       │ 1º Turno (6257)   │ 2º Turno (6258)    │
+├───────────────────────────────┼───────────────────┼────────────────────┤
+│ Seções ≥ 90% LULA             │ 3.648 seções      │ 6.793 seções       │
+│ Seções ≥ 90% FLÁVIO BOLSONARO │   184 seções      │   380 seções       │
+├───────────────────────────────┼───────────────────┼────────────────────┤
+│ TOTAL SEÇÕES ≥ 90%            │ 3.832 seções      │ 7.173 seções       │
+├───────────────────────────────┼───────────────────┼────────────────────┤
+│ Hegemônicas LULA (≥90% + 100%)│ 3.686 seções      │ 6.899 seções       │
+│ Hegemônicas F. BOLS (≥90%+100%)│  186 seções      │   384 seções       │
+├───────────────────────────────┼───────────────────┼────────────────────┤
+│ TOTAL GERAL HEGEMÔNICAS       │ 3.872 seções      │ 7.283 seções       │
+└───────────────────────────────┴───────────────────┴────────────────────┘
 ```
 
-### Principais Concentrações Regionais em 2026:
+### Principais Concentrações Regionais no 2º Turno 2026:
 - **Lula ($\ge 90\%$):** 
   - Predomínio concentrado no interior do Nordeste e Norte:
     - **Maranhão:** 1.549 seções
@@ -356,15 +373,20 @@ local-eleicoes-2026/
 | :--- | :--- |
 | [`data/processed/analise_migracao_lula_1t_2t.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/analise_migracao_lula_1t_2t.csv) | Tabela auditada das 28 UFs comparando votos nominais de Lula no 1ºT e 2ºT, ganhos, % de crescimento, participação nacional e links oficiais do TSE. |
 | [`data/processed/decomposicao_votos_brasil.json`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/decomposicao_votos_brasil.json) | Decomposição estruturada completa das 4 fontes de votos e do crescimento regional de Lula consumida pelo dashboard. |
-| [`data/processed/brasil_resumo_secoes_por_uf.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_resumo_secoes_por_uf.csv) | Tabela resumo oficial de 2026 com total de seções, votos nominais e contagem de seções 100% e $\ge 90\%$ para Lula e Flávio Bolsonaro em cada uma das 28 UFs. |
-| [`data/processed/brasil_secoes_100pct.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_secoes_100pct.csv) | Relação detalhada de todas as **110 seções eleitorais** com 100% de votos em 2026 no país (candidato, UF, município, zona, seção, votos e link oficial do BU). |
-| [`data/processed/brasil_secoes_90pct.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_secoes_90pct.csv) | Relação detalhada das **7.173 seções** com votação igual ou superior a 90% dos votos nominais em 2026. |
-| [`data/processed/cidades_mapa_eleicoes.json`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/cidades_mapa_eleicoes.json) | Base georreferenciada de municípios brasileiros com coordenadas de latitude/longitude e agregação de seções hegemônicas de 2026. |
-| [`data/processed/dados_mapa_calor.json`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/dados_mapa_calor.json) | Estrutura compilada de estatísticas e rankings estaduais consumida pelo dashboard. |
+| [`data/processed/brasil_resumo_secoes_por_uf_1t.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_resumo_secoes_por_uf_1t.csv) | Resumo por UF do 1º Turno 2026 (seções totais, votos nominais, contagem de seções 100% e $\ge 90\%$). |
+| [`data/processed/brasil_resumo_secoes_por_uf_2t.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_resumo_secoes_por_uf_2t.csv) | Resumo por UF do 2º Turno 2026 (seções totais, votos nominais, contagem de seções 100% e $\ge 90\%$). |
+| [`data/processed/brasil_secoes_100pct_1t.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_secoes_100pct_1t.csv) | Relação detalhada de todas as **40 seções eleitorais** com 100% de votos no 1º Turno 2026 (38 Lula, 2 Flávio Bolsonaro). |
+| [`data/processed/brasil_secoes_100pct_2t.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_secoes_100pct_2t.csv) | Relação detalhada de todas as **110 seções eleitorais** com 100% de votos no 2º Turno 2026 (106 Lula, 4 Flávio Bolsonaro). |
+| [`data/processed/brasil_secoes_90pct_1t.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_secoes_90pct_1t.csv) | Relação detalhada das **3.832 seções** com $\ge 90\%$ de votos nominais no 1º Turno 2026 (3.648 Lula, 184 Flávio Bolsonaro). |
+| [`data/processed/brasil_secoes_90pct_2t.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/brasil_secoes_90pct_2t.csv) | Relação detalhada das **7.173 seções** com $\ge 90\%$ de votos nominais no 2º Turno 2026 (6.793 Lula, 380 Flávio Bolsonaro). |
+| [`data/processed/cidades_compact_1t.json`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/cidades_compact_1t.json) | Base georreferenciada compacta dos municípios com seções hegemônicas no 1º Turno 2026. |
+| [`data/processed/cidades_compact_2t.json`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/cidades_compact_2t.json) | Base georreferenciada compacta dos municípios com seções hegemônicas no 2º Turno 2026. |
+| [`data/processed/cidades_mapa_eleicoes.json`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/cidades_mapa_eleicoes.json) | Catálogo expandido de municípios brasileiros com coordenadas geográficas do IBGE e contagem de seções. |
+| [`data/processed/dados_mapa_calor.json`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/dados_mapa_calor.json) | Estrutura unificada consumida pelo dashboard web interativo contendo dados de 1ºT, 2ºT e Migração. |
 | [`data/processed/horarios_votos.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/horarios_votos.csv) | Registro auditado individual de cada voto de Luislândia/MG com milissegundos e tempo de cabine. |
-| [`data/processed/secoes_100pct_bahia.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/secoes_100pct_bahia.csv) | Extrato específico com as 4 seções 100% da Bahia em 2026. |
-| [`data/processed/secoes_100pct_minas_gerais.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/secoes_100pct_minas_gerais.csv) | Extrato específico com as 2 seções 100% de Minas Gerais em 2026. |
-| [`data/processed/secoes_100pct_para.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/secoes_100pct_para.csv) | Extrato específico com as 18 seções 100% do Pará em 2026 (16 Lula e 2 Flávio Bolsonaro). |
+| [`data/processed/secoes_100pct_bahia.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/secoes_100pct_bahia.csv) | Extrato específico com as 4 seções 100% da Bahia no 2º Turno 2026. |
+| [`data/processed/secoes_100pct_minas_gerais.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/secoes_100pct_minas_gerais.csv) | Extrato específico com as 2 seções 100% de Minas Gerais no 2º Turno 2026. |
+| [`data/processed/secoes_100pct_para.csv`](file:///Users/romuloigor/Local/local-eleicoes-2026/data/processed/secoes_100pct_para.csv) | Extrato específico com as 18 seções 100% do Pará no 2º Turno 2026 (16 Lula e 2 Flávio Bolsonaro). |
 
 ---
 
