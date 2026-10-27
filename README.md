@@ -2,6 +2,9 @@
 
 Repositório técnico de inteligência de dados, descompactação criptográfica e auditoria estatística dos arquivos oficiais de **Log de Urna** (`.jez` / `logd.dat`) e **Boletins de Urna na Web** (`BWEB`) do Tribunal Superior Eleitoral (TSE).
 
+> 🌐 **Dashboard Interativo Online (GitHub Pages):** [https://romuloigor.github.io/eleicoes-2026/](https://romuloigor.github.io/eleicoes-2026/)  
+> 📂 **Repositório Público no GitHub:** [https://github.com/romuloigor/eleicoes-2026](https://github.com/romuloigor/eleicoes-2026)
+
 Este projeto cobre desde a engenharia reversa do formato proprietário de logs da Urna Eletrônica (Uenux) até a análise exaustiva das **472.028 seções eleitorais** do Brasil e Exterior no 2º Turno Presidencial, mapeando as seções com votações unânimes (**100%**) e quase unânimes (**$\ge 90\%$**), tempos de permanência em cabine e diagnósticos empíricos de integridade.
 
 ---
