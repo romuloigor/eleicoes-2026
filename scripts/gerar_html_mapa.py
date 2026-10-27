@@ -46,7 +46,7 @@ html_template = f'''<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa de Calor Eleitoral: Seções Absolutas no Brasil (100% e ≥90%)</title>
+  <title>Mapa de Calor Eleitoral: Seções Absolutas no Brasil 2026 (100% e ≥90%)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -818,14 +818,14 @@ html_template = f'''<!DOCTYPE html>
   <div class="container">
     <header>
       <div class="header-top">
-        <div class="badge-live">Auditoria Eleitoral em Tempo Real • 2º Turno Oficial</div>
+        <div class="badge-live">Auditoria Eleitoral TSE 2026 • 2º Turno Oficial</div>
         <button class="theme-toggle" onclick="alternarTema()">
           <span id="theme-icon">🌙</span> <span id="theme-text">Modo Escuro</span>
         </button>
       </div>
-      <h1>Mapa de Calor: Seções Absolutas no Brasil</h1>
+      <h1>Mapa de Calor: Seções Absolutas no Brasil (2026)</h1>
       <p class="subtitle">
-        Análise nacional de todas as 472.028 seções eleitorais nas 27 UFs e Exterior, identificando as cidades onde Lula e Bolsonaro registraram hegemonia absoluta (100% dos votos nominais) e quase absoluta (≥ 90% dos votos).
+        Análise nacional oficial de todas as 499.205 seções eleitorais nas 28 UFs (26 estados + DF + Exterior ZZ) no 2º Turno da Eleição Presidencial de 2026, identificando as cidades onde Lula (13) e Flávio Bolsonaro (22) registraram hegemonia absoluta (100% dos votos nominais) e quase absoluta (≥ 90% dos votos).
       </p>
     </header>
 
@@ -833,27 +833,27 @@ html_template = f'''<!DOCTYPE html>
     <div class="kpi-grid">
       <div class="kpi-card neutral">
         <div class="kpi-title">Total de Seções no Brasil</div>
-        <div class="kpi-value" id="kpi-total-secoes">472.028</div>
+        <div class="kpi-value" id="kpi-total-secoes">499.205</div>
         <div class="kpi-desc">Todas as 28 UFs (incluindo Exterior ZZ)</div>
       </div>
       <div class="kpi-card lula">
         <div class="kpi-title">Seções 100% LULA</div>
-        <div class="kpi-value" id="kpi-100-lula">143</div>
+        <div class="kpi-value" id="kpi-100-lula">106</div>
         <div class="kpi-desc">Zero votos para o concorrente</div>
       </div>
       <div class="kpi-card bolsonaro">
-        <div class="kpi-title">Seções 100% BOLSONARO</div>
+        <div class="kpi-title">Seções 100% FLÁVIO BOLSONARO</div>
         <div class="kpi-value" id="kpi-100-bols">4</div>
         <div class="kpi-desc">Zero votos para o concorrente</div>
       </div>
       <div class="kpi-card lula">
         <div class="kpi-title">Seções ≥ 90% LULA</div>
-        <div class="kpi-value" id="kpi-90-lula">9.538</div>
+        <div class="kpi-value" id="kpi-90-lula">6.899</div>
         <div class="kpi-desc">Hegemonia quase total (90% a 100%)</div>
       </div>
       <div class="kpi-card bolsonaro">
-        <div class="kpi-title">Seções ≥ 90% BOLSONARO</div>
-        <div class="kpi-value" id="kpi-90-bols">220</div>
+        <div class="kpi-title">Seções ≥ 90% FLÁVIO BOLSONARO</div>
+        <div class="kpi-value" id="kpi-90-bols">384</div>
         <div class="kpi-desc">Hegemonia quase total (90% a 100%)</div>
       </div>
     </div>
@@ -873,7 +873,7 @@ html_template = f'''<!DOCTYPE html>
         <div class="button-group">
           <button class="btn-toggle active" id="btn-cand-ambos" onclick="alterarCandidato('ambos')">Ambos Candidatos</button>
           <button class="btn-toggle" id="btn-cand-lula" onclick="alterarCandidato('lula')">Lula (PT)</button>
-          <button class="btn-toggle" id="btn-cand-bols" onclick="alterarCandidato('bolsonaro')">Bolsonaro (PL)</button>
+          <button class="btn-toggle" id="btn-cand-bols" onclick="alterarCandidato('bolsonaro')">Flávio Bolsonaro (PL)</button>
         </div>
       </div>
     </div>
@@ -917,7 +917,7 @@ html_template = f'''<!DOCTYPE html>
         </div>
         <div class="legend-item">
           <span class="legend-circle bols"></span>
-          <span><strong>Verde:</strong> Cidades com seções de Bolsonaro</span>
+          <span><strong>Verde:</strong> Cidades com seções de Flávio Bolsonaro</span>
         </div>
         <div class="legend-item" style="color: var(--text-faint); margin-left: auto;">
           * O raio do círculo é proporcional à quantidade de seções na cidade.
@@ -939,7 +939,7 @@ html_template = f'''<!DOCTYPE html>
 
       <div class="card-panel">
         <div class="panel-header">
-          <h2 class="panel-title">Top Estados com Hegemonia de BOLSONARO</h2>
+          <h2 class="panel-title">Top Estados com Hegemonia de FLÁVIO BOLSONARO</h2>
           <span style="font-size: 0.85rem; color: var(--bolsonaro-color); font-weight: 700;">Concentração no Sul, Centro-Oeste e Exterior</span>
         </div>
         <div class="ranking-list" id="ranking-bols-container">
@@ -972,7 +972,7 @@ html_template = f'''<!DOCTYPE html>
         <div class="migration-banner-text">
           <h3>+10.376.694 votos nominais adicionais (+19,26% / ~10,4M - ~11 Milhões)</h3>
           <p>
-            No 2º Turno, o candidato Lula avançou de <strong>53.879.538</strong> para <strong>64.256.232 votos</strong> (+10.376.694), enquanto Bolsonaro foi de 56.104.503 para 59.826.041 (+3.721.538). Dos ~14,1 milhões de votos disponíveis na repactuação eleitoral, Lula absorveu <strong>73,6%</strong>, consolidando a vitória nacional.
+            No 2º Turno, o candidato Lula avançou de <strong>53.879.538</strong> para <strong>64.256.232 votos</strong> (+10.376.694 / +19,26%), enquanto Flávio Bolsonaro foi de 56.104.503 para 59.826.041 (+3.721.538 / +6,63%). Dos ~14,1 milhões de votos disponíveis na repactuação eleitoral, Lula absorveu <strong>73,6%</strong>, consolidando a vitória nacional.
           </p>
         </div>
       </div>
@@ -1295,9 +1295,9 @@ html_template = f'''<!DOCTYPE html>
         let popupContent = `
           <div class="popup-cidade">
             <h3>${{escapeHtml(c.n)}} (${{escapeHtml(c.uf)}})</h3>
-            <p><strong>Candidato Predominante:</strong> ${{qtdLula >= qtdBols ? 'LULA (PT)' : 'BOLSONARO (PL)'}}</p>
-            <p><strong>Seções 100% Absolutas:</strong> Lula: ${{c.s100_l}} | Bolsonaro: ${{c.s100_b}}</p>
-            <p><strong>Seções ≥ 90% Hegemônicas:</strong> Lula: ${{c.s100_l + c.s90_l}} | Bolsonaro: ${{c.s100_b + c.s90_b}}</p>
+            <p><strong>Candidato Predominante:</strong> ${{qtdLula >= qtdBols ? 'LULA (PT)' : 'FLÁVIO BOLSONARO (PL)'}}</p>
+            <p><strong>Seções 100% Absolutas:</strong> Lula: ${{c.s100_l}} | Flávio Bolsonaro: ${{c.s100_b}}</p>
+            <p><strong>Seções ≥ 90% Hegemônicas:</strong> Lula: ${{c.s100_l + c.s90_l}} | Flávio Bolsonaro: ${{c.s100_b + c.s90_b}}</p>
             ${{c.url ? `<p style="margin-top:8px;"><a href="${{encodeURI(c.url)}}" target="_blank" rel="noopener noreferrer" class="btn-bu" style="display:inline-block; padding: 4px 10px;">Ver Boletim de Urna no TSE ↗</a></p>` : ''}}
           </div>
         `;
@@ -1362,7 +1362,7 @@ html_template = f'''<!DOCTYPE html>
             <span style="color: var(--bolsonaro-color); font-weight:700;">${{item.bolsVal}} seções</span>
           </div>
           <div class="bar-row">
-            <span class="bar-label" style="color: var(--bolsonaro-color);">BOLSONARO</span>
+            <span class="bar-label" style="color: var(--bolsonaro-color);">F. BOLSONARO</span>
             <div class="bar-track">
               <div class="bar-fill-bols" style="width: ${{width}}%"></div>
             </div>
@@ -1383,7 +1383,7 @@ html_template = f'''<!DOCTYPE html>
       let filtradas = listaSeções.filter(s => {{
         if (ufSelecionada && s.uf !== ufSelecionada) return false;
         if (candAtual === 'lula' && s.candidato !== 'LULA') return false;
-        if (candAtual === 'bolsonaro' && s.candidato !== 'JAIR BOLSONARO') return false;
+        if (candAtual === 'bolsonaro' && !s.candidato.includes('BOLSONARO')) return false;
         if (filtroTexto) {{
           return s.nome_municipio.toLowerCase().includes(filtroTexto) || s.uf.toLowerCase().includes(filtroTexto);
         }}

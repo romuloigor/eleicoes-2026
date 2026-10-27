@@ -1,10 +1,19 @@
-UF,Codigo_Municipio,Nome_Municipio,Zona,Secao,Aptos,Comparecimento,Candidato_100pct,Votos_Nominais,Brancos,Nulos,URL_TSE
-PA,4723,ANAPU,80,254,250,158,LULA,157,0,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04723/zn/0080/cargo/1/vis/nominal/se/0254/dados-de-urna/boletim-de-urna
-PA,4359,BREVES,15,289,45,33,LULA,29,4,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04359/zn/0015/cargo/1/vis/nominal/se/0289/dados-de-urna/boletim-de-urna
-PA,4499,CHAVES,17,41,63,40,JAIR BOLSONARO,39,1,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04499/zn/0017/cargo/1/vis/nominal/se/0041/dados-de-urna/boletim-de-urna
-PA,4774,JURUTI,105,92,58,30,LULA,29,0,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04774/zn/0105/cargo/1/vis/nominal/se/0092/dados-de-urna/boletim-de-urna
-PA,4936,MOJU,37,120,79,50,LULA,49,1,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04936/zn/0037/cargo/1/vis/nominal/se/0120/dados-de-urna/boletim-de-urna
-PA,5053,ORIXIMINÁ,38,260,131,111,LULA,111,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05053/zn/0038/cargo/1/vis/nominal/se/0260/dados-de-urna/boletim-de-urna
-PA,4146,SANTA LUZIA DO PARÁ,41,198,93,84,LULA,82,0,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04146/zn/0041/cargo/1/vis/nominal/se/0198/dados-de-urna/boletim-de-urna
-PA,5436,SÃO DOMINGOS DO CAPIM,50,181,121,105,LULA,103,0,2,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05436/zn/0050/cargo/1/vis/nominal/se/0181/dados-de-urna/boletim-de-urna
-PA,5452,SÃO FÉLIX DO XINGU,53,218,286,195,LULA,194,0,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05452/zn/0053/cargo/1/vis/nominal/se/0218/dados-de-urna/boletim-de-urna
+uf,municipio,nome_municipio,zona,secao,aptos,comparecimento,votos_nominais,votos_lula,votos_bolsonaro,brancos,nulos,url_tse,candidato,percentual
+PA,4200,JACAREACANGA,102,44,50,50,50,0,50,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04200/zn/0102/cargo/1/vis/nominal/se/0044/dados-de-urna/boletim-de-urna,FLÁVIO BOLSONARO,100.0
+PA,4499,CHAVES,17,41,49,49,48,0,48,1,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04499/zn/0017/cargo/1/vis/nominal/se/0041/dados-de-urna/boletim-de-urna,FLÁVIO BOLSONARO,100.0
+PA,5452,SÃO FÉLIX DO XINGU,53,218,273,273,273,273,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05452/zn/0053/cargo/1/vis/nominal/se/0218/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5835,PARAUAPEBAS,106,330,212,212,212,212,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05835/zn/0106/cargo/1/vis/nominal/se/0330/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5835,PARAUAPEBAS,106,365,198,198,197,197,0,0,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05835/zn/0106/cargo/1/vis/nominal/se/0365/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,4090,ALMEIRIM,55,128,157,157,156,156,0,0,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04090/zn/0055/cargo/1/vis/nominal/se/0128/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5053,ORIXIMINÁ,38,260,152,152,152,152,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05053/zn/0038/cargo/1/vis/nominal/se/0260/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5452,SÃO FÉLIX DO XINGU,53,217,145,145,145,145,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05452/zn/0053/cargo/1/vis/nominal/se/0217/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5053,ORIXIMINÁ,38,259,133,133,133,133,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05053/zn/0038/cargo/1/vis/nominal/se/0259/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,4197,AVEIRO,34,660,106,106,106,106,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04197/zn/0034/cargo/1/vis/nominal/se/0660/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5657,VISEU,14,236,68,68,64,64,0,0,4,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05657/zn/0014/cargo/1/vis/nominal/se/0236/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,4073,ALENQUER,21,234,60,60,60,60,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04073/zn/0021/cargo/1/vis/nominal/se/0234/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5096,PARAGOMINAS,42,214,55,55,54,54,0,1,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05096/zn/0042/cargo/1/vis/nominal/se/0214/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,4111,ALTAMIRA,18,516,53,53,52,52,0,0,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04111/zn/0018/cargo/1/vis/nominal/se/0516/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,4936,MOJU,37,120,41,41,41,41,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04936/zn/0037/cargo/1/vis/nominal/se/0120/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,4111,ALTAMIRA,18,519,35,35,35,35,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04111/zn/0018/cargo/1/vis/nominal/se/0519/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,5053,ORIXIMINÁ,38,243,36,36,35,35,0,0,1,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/05053/zn/0038/cargo/1/vis/nominal/se/0243/dados-de-urna/boletim-de-urna,LULA,100.0
+PA,4421,NOVO REPARTIMENTO,101,152,18,18,18,18,0,0,0,https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6258/uf/pa/mu/04421/zn/0101/cargo/1/vis/nominal/se/0152/dados-de-urna/boletim-de-urna,LULA,100.0

@@ -14,6 +14,9 @@ __pycache__/
 scratch/
 .tempmediaStorage/
 tmp/
-.cm_project
-.codemender/
+# Large archives / TSE data zips
+*.zip
+data/zips/
+data/raw/*.csv
+data/raw/*.zip
 
